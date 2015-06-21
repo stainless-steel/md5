@@ -9,10 +9,10 @@ use std::convert::From;
 use std::io::{Result, Write};
 use std::mem;
 
-/// An MD5 digest.
+/// A digest.
 pub type Digest = [u8; 16];
 
-/// An MD5 context.
+/// A context.
 pub struct Context {
   handled: [u32; 2],
   buffer: [u32; 4],
