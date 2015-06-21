@@ -1,6 +1,6 @@
 # MD5 [![Version][version-img]][version-url] [![Status][status-img]][status-url]
 
-The package provides [MD5][1] hash function.
+The package provides the [MD5][1] hash function.
 
 ## [Documentation][doc]
 
