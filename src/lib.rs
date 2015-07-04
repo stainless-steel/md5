@@ -19,6 +19,20 @@ pub struct Context {
   input: [u8; 64],
 }
 
+impl Clone for Context {
+    fn clone(&self) -> Context {
+        // Copy is not implemented for [T; 64], but it's implemented for [T; 16]
+        let input = unsafe { mem::transmute::<_, [u32; 16]>(self.input) };
+        Context {
+            handled: self.handled,
+            buffer: self.buffer,
+            input: unsafe { mem::transmute(input) }
+        }
+    }
+}
+
+impl Copy for Context {}
+
 const PADDING: [u8; 64] = [
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
