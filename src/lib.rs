@@ -20,11 +20,6 @@ pub struct Context {
   input: [u8; 64],
 }
 
-impl Clone for Context {
-    #[inline]
-    fn clone(&self) -> Context { *self }
-}
-
 const PADDING: [u8; 64] = [
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -131,6 +126,11 @@ impl From<Context> for Digest {
     fn from(context: Context) -> Digest {
         context.compute()
     }
+}
+
+impl Clone for Context {
+    #[inline]
+    fn clone(&self) -> Context { *self }
 }
 
 /// Compute the digest of data.
