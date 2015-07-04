@@ -13,6 +13,7 @@ use std::mem;
 pub type Digest = [u8; 16];
 
 /// A context.
+#[derive(Copy)]
 pub struct Context {
   handled: [u32; 2],
   buffer: [u32; 4],
@@ -20,18 +21,9 @@ pub struct Context {
 }
 
 impl Clone for Context {
-    fn clone(&self) -> Context {
-        // Copy is not implemented for [T; 64], but it's implemented for [T; 16]
-        let input = unsafe { mem::transmute::<_, [u32; 16]>(self.input) };
-        Context {
-            handled: self.handled,
-            buffer: self.buffer,
-            input: unsafe { mem::transmute(input) }
-        }
-    }
+    #[inline]
+    fn clone(&self) -> Context { *self }
 }
-
-impl Copy for Context {}
 
 const PADDING: [u8; 64] = [
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
