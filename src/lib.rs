@@ -130,7 +130,9 @@ impl From<Context> for Digest {
 
 impl Clone for Context {
     #[inline]
-    fn clone(&self) -> Context { *self }
+    fn clone(&self) -> Context {
+        *self
+    }
 }
 
 /// Compute the digest of data.
