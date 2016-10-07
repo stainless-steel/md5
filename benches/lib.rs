@@ -1,16 +1,40 @@
+#![no_std]
 #![feature(test)]
-
-extern crate md5;
 extern crate test;
+extern crate md5;
+extern crate digest;
 
-#[bench] fn compute_0001000(bencher: &mut test::Bencher) { compute(    1000, bencher); }
-#[bench] fn compute_0010000(bencher: &mut test::Bencher) { compute(   10000, bencher); }
-#[bench] fn compute_0100000(bencher: &mut test::Bencher) { compute(  100000, bencher); }
-#[bench] fn compute_1000000(bencher: &mut test::Bencher) { compute(1_000000, bencher); }
+use test::Bencher;
+use digest::Digest;
+use md5::Md5;
 
-fn compute(size: usize, bencher: &mut test::Bencher) {
-    let data = &vec![0xFFu8; size][..];
-    bencher.iter(|| {
-        test::black_box(md5::compute(data));
+
+#[bench]
+pub fn md5_10(bh: &mut Bencher) {
+    let mut sh = Md5::new();
+    let bytes = [1u8; 10];
+    bh.iter(|| {
+        sh.input(&bytes);
     });
+    bh.bytes = bytes.len() as u64;
+}
+
+#[bench]
+pub fn md5_1k(bh: &mut Bencher) {
+    let mut sh = Md5::new();
+    let bytes = [1u8; 1024];
+    bh.iter(|| {
+        sh.input(&bytes);
+    });
+    bh.bytes = bytes.len() as u64;
+}
+
+#[bench]
+pub fn md5_64k(bh: &mut Bencher) {
+    let mut sh = Md5::new();
+    let bytes = [1u8; 65536];
+    bh.iter(|| {
+        sh.input(&bytes);
+    });
+    bh.bytes = bytes.len() as u64;
 }
