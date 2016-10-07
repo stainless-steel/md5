@@ -4,6 +4,14 @@ The package provides the [MD5][1] hash function.
 
 ## [Documentation][doc]
 
+## Example
+
+```rust
+let digest = md5::compute(b"abcdefghijklmnopqrstuvwxyz");
+assert_eq!(digest, [0xc3, 0xfc, 0xd3, 0xd7, 0x61, 0x92, 0xe4, 0x00,
+                    0x7d, 0xfb, 0x49, 0x6c, 0xca, 0x67, 0xe1, 0x3b]);
+```
+
 ## Contribution
 
 Your contribution is highly appreciated. Do not hesitate to open an issue or a
