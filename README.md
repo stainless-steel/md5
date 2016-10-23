@@ -2,7 +2,7 @@
 
 The package provides the [MD5][1] hash function.
 
-## [Documentation][doc]
+## [Documentation][documentation]
 
 ## Example
 
@@ -20,7 +20,7 @@ will be licensed according to the terms given in [LICENSE.md](LICENSE.md).
 
 [1]: https://en.wikipedia.org/wiki/MD5
 
-[doc]: https://stainless-steel.github.io/md5
+[documentation]: https://docs.rs/md5
 [status-img]: https://travis-ci.org/stainless-steel/md5.svg?branch=master
 [status-url]: https://travis-ci.org/stainless-steel/md5
 [version-img]: https://img.shields.io/crates/v/md5.svg
