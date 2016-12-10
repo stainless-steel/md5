@@ -4,8 +4,13 @@
 //!
 //! ```
 //! let digest = md5::compute(b"abcdefghijklmnopqrstuvwxyz");
-//! assert_eq!(digest, [0xc3, 0xfc, 0xd3, 0xd7, 0x61, 0x92, 0xe4, 0x00,
-//!                     0x7d, 0xfb, 0x49, 0x6c, 0xca, 0x67, 0xe1, 0x3b]);
+//!
+//! assert_eq!(format!("{:x}", digest), "c3fcd3d76192e4007dfb496cca67e13b");
+//! assert_eq!(
+//!     digest.raw_data(),
+//!     [0xc3, 0xfc, 0xd3, 0xd7, 0x61, 0x92, 0xe4, 0x00,
+//!         0x7d, 0xfb, 0x49, 0x6c, 0xca, 0x67, 0xe1, 0x3b]
+//! );
 //! ```
 //!
 //! [1]: https://en.wikipedia.org/wiki/MD5
@@ -16,9 +21,69 @@
 use std::convert::From;
 use std::io::{Result, Write};
 use std::mem;
+use std::ops;
+use std::fmt;
+
+// pub type Digest = [u8; 16];
 
 /// A digest.
-pub type Digest = [u8; 16];
+///
+/// The raw data of the digest can be accessed with the `raw_data()` method.
+/// You can also obtain a hexadecimal representation (which is usually used
+/// to display MD5-hashes) by using the hex formatter from `std::fmt`:
+///
+/// ```
+/// let digest = md5::compute(b"Ferris");
+/// println!("{:x}", digest); // prints 'f87eb669657376982ea0184c3c27c0bc'
+/// println!("{:X}", digest); // prints 'F87EB669657376982EA0184C3C27C0BC'
+///
+/// // The hexadecimal representation can also be saved in a `String` via the
+/// // `format!()` macro.
+/// let hex_string = format!("{:x}", digest); // : String
+/// assert_eq!(hex_string, "f87eb669657376982ea0184c3c27c0bc");
+/// ```
+///
+pub struct Digest(pub [u8; 16]);
+
+impl Digest {
+    /// Returns the raw data as fixed-size array. Of course, you can also
+    /// just access the field via `digest.0`, but this method is more
+    /// descriptive.
+    pub fn raw_data(&self) -> [u8; 16] {
+        self.0
+    }
+}
+
+impl ops::Deref for Digest {
+    type Target = [u8; 16];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl ops::Index<usize> for Digest {
+    type Output = u8;
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.0[idx]
+    }
+}
+
+macro_rules! impl_fmt {
+    ($trai:ident, $fmt:expr) => {
+        impl fmt::$trai for Digest {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                for byte in &self.0 {
+                    try!(write!(f, $fmt, byte));
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+impl_fmt!(LowerHex, "{:02x}");
+impl_fmt!(UpperHex, "{:02X}");
+
 
 /// A context.
 #[derive(Copy)]
@@ -101,7 +166,7 @@ impl Context {
         }
         transform(&mut self.buffer, &input);
 
-        let mut digest: Digest = unsafe { mem::uninitialized() };
+        let mut digest: [u8; 16] = unsafe { mem::uninitialized() };
 
         let mut j = 0;
         for i in 0..4 {
@@ -112,7 +177,7 @@ impl Context {
             j += 4;
         }
 
-        digest
+        Digest(digest)
     }
 }
 
@@ -136,6 +201,8 @@ impl From<Context> for Digest {
     }
 }
 
+// We need to manually implement `Clone`, because it's not implemented for
+// array of size 64.
 impl Clone for Context {
     #[inline]
     fn clone(&self) -> Context {
@@ -313,11 +380,7 @@ mod tests {
         ($string:expr) => ({
             let mut context = ::Context::new();
             context.consume($string.as_bytes());
-            let mut digest = String::with_capacity(2 * 16);
-            for x in &context.compute()[..] {
-                digest.push_str(&format!("{:02x}", x));
-            }
-            digest
+            format!("{:x}", context.compute())
         });
     );
 
@@ -344,7 +407,7 @@ mod tests {
         ];
 
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
-            assert_eq!(&digest!(input)[..], output);
+            assert_eq!(digest!(input), output);
         }
     }
 }
