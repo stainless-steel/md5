@@ -28,8 +28,6 @@ use std::mem;
 use std::ops;
 use std::fmt;
 
-// pub type Digest = [u8; 16];
-
 /// A digest.
 ///
 /// The raw data of the digest can be accessed with the `raw_data()` method.
