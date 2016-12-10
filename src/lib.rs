@@ -13,6 +13,10 @@
 //! );
 //! ```
 //!
+//! If you want to hash a lot of data, consider using the `Context` type to
+//! avoid loading all of the data into memory at once.
+//!
+//!
 //! [1]: https://en.wikipedia.org/wiki/MD5
 
 // The implementation is based on:
@@ -86,6 +90,14 @@ impl_fmt!(UpperHex, "{:02X}");
 
 
 /// A context.
+///
+/// This type allows to stream the hash calculation, instead of doing it
+/// on one big chunk of memory. You can just call the `consume()` method
+/// whenever new data is available. When all data has been fed into the
+/// context, you can call `compute()` to get the resulting digest.
+///
+/// This context has a fixed size and will not allocate any memory on the
+/// heap!
 #[derive(Copy)]
 pub struct Context {
   handled: [u32; 2],
