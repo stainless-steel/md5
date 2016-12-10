@@ -211,10 +211,13 @@ impl Clone for Context {
 }
 
 /// Compute the digest of data.
+///
+/// This is a shorthand for manually creating a `Context`, writing data
+/// into it and calling `compute()`.
 #[inline]
-pub fn compute(data: &[u8]) -> Digest {
+pub fn compute<A: AsRef<[u8]>>(data: A) -> Digest {
     let mut context = Context::new();
-    context.consume(data);
+    context.consume(data.as_ref());
     context.compute()
 }
 
@@ -376,16 +379,10 @@ fn transform(buffer: &mut [u32; 4], input: &[u32; 16]) {
 
 #[cfg(test)]
 mod tests {
-    macro_rules! digest(
-        ($string:expr) => ({
-            let mut context = ::Context::new();
-            context.consume($string.as_bytes());
-            format!("{:x}", context.compute())
-        });
-    );
-
     #[test]
     fn compute() {
+        use super::*;
+
         let inputs = [
             "",
             "a",
@@ -407,7 +404,8 @@ mod tests {
         ];
 
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
-            assert_eq!(digest!(input), output);
+            let digest = compute(input);
+            assert_eq!(format!("{:x}", digest), output);
         }
     }
 }
