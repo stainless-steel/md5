@@ -12,9 +12,9 @@
 // The implementation is based on:
 // http://people.csail.mit.edu/rivest/Md5.c
 
+use std::{fmt, mem};
 use std::convert::From;
 use std::io::{Result, Write};
-use std::{fmt, mem};
 use std::ops::{Deref, Index};
 
 /// A digest.
@@ -22,6 +22,7 @@ pub struct Digest(pub [u8; 16]);
 
 impl Deref for Digest {
     type Target = [u8; 16];
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -29,23 +30,24 @@ impl Deref for Digest {
 
 impl Index<usize> for Digest {
     type Output = u8;
+
     fn index(&self, idx: usize) -> &Self::Output {
         &self.0[idx]
     }
 }
 
 impl From<Digest> for [u8; 16] {
-    fn from(d: Digest) -> Self {
-        d.0
+    fn from(digest: Digest) -> Self {
+        digest.0
     }
 }
 
 macro_rules! implement {
-    ($trai:ident, $fmt:expr) => {
-        impl fmt::$trai for Digest {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    ($kind:ident, $format:expr) => {
+        impl fmt::$kind for Digest {
+            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 for byte in &self.0 {
-                    try!(write!(f, $fmt, byte));
+                    try!(write!(formatter, $format, byte));
                 }
                 Ok(())
             }
@@ -56,13 +58,12 @@ macro_rules! implement {
 implement!(LowerHex, "{:02x}");
 implement!(UpperHex, "{:02X}");
 
-
 /// A context.
 #[derive(Copy)]
 pub struct Context {
-  handled: [u32; 2],
-  buffer: [u32; 4],
-  input: [u8; 64],
+    handled: [u32; 2],
+    buffer: [u32; 4],
+    input: [u8; 64],
 }
 
 const PADDING: [u8; 64] = [
@@ -92,14 +93,15 @@ impl Context {
         let mut input: [u32; 16] = unsafe { mem::uninitialized() };
         let mut k = ((self.handled[0] >> 3) & 0x3F) as usize;
 
-        let length = data.as_ref().len() as u32;
+        let data = data.as_ref();
+        let length = data.len() as u32;
         if (self.handled[0] + (length << 3)) < self.handled[0] {
             self.handled[1] += 1;
         }
         self.handled[0] += length << 3;
         self.handled[1] += length >> 29;
 
-        for &value in data.as_ref() {
+        for &value in data {
             self.input[k] = value;
             k += 1;
             if k != 0x40 {
@@ -348,8 +350,6 @@ fn transform(buffer: &mut [u32; 4], input: &[u32; 16]) {
 mod tests {
     #[test]
     fn compute() {
-        use super::compute;
-
         let inputs = [
             "",
             "a",
@@ -371,7 +371,7 @@ mod tests {
         ];
 
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
-            assert_eq!(format!("{:x}", compute(input)), output);
+            assert_eq!(format!("{:x}", ::compute(input)), output);
         }
     }
 }
