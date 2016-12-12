@@ -4,18 +4,8 @@
 //!
 //! ```
 //! let digest = md5::compute(b"abcdefghijklmnopqrstuvwxyz");
-//!
 //! assert_eq!(format!("{:x}", digest), "c3fcd3d76192e4007dfb496cca67e13b");
-//! assert_eq!(
-//!     digest.raw_data(),
-//!     [0xc3, 0xfc, 0xd3, 0xd7, 0x61, 0x92, 0xe4, 0x00,
-//!         0x7d, 0xfb, 0x49, 0x6c, 0xca, 0x67, 0xe1, 0x3b]
-//! );
 //! ```
-//!
-//! If you want to hash a lot of data, consider using the `Context` type to
-//! avoid loading all of the data into memory at once.
-//!
 //!
 //! [1]: https://en.wikipedia.org/wiki/MD5
 
@@ -24,27 +14,10 @@
 
 use std::convert::From;
 use std::io::{Result, Write};
-use std::mem;
-use std::ops;
-use std::fmt;
+use std::{fmt, mem};
+use std::ops::{Deref, Index};
 
 /// A digest.
-///
-/// The raw data of the digest can be accessed with the `raw_data()` method.
-/// You can also obtain a hexadecimal representation (which is usually used
-/// to display MD5-hashes) by using the hex formatter from `std::fmt`:
-///
-/// ```
-/// let digest = md5::compute(b"Ferris");
-/// println!("{:x}", digest); // prints 'f87eb669657376982ea0184c3c27c0bc'
-/// println!("{:X}", digest); // prints 'F87EB669657376982EA0184C3C27C0BC'
-///
-/// // The hexadecimal representation can also be saved in a `String` via the
-/// // `format!()` macro.
-/// let hex_string = format!("{:x}", digest); // : String
-/// assert_eq!(hex_string, "f87eb669657376982ea0184c3c27c0bc");
-/// ```
-///
 pub struct Digest(pub [u8; 16]);
 
 impl Digest {
@@ -56,21 +29,27 @@ impl Digest {
     }
 }
 
-impl ops::Deref for Digest {
+impl Deref for Digest {
     type Target = [u8; 16];
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl ops::Index<usize> for Digest {
+impl Index<usize> for Digest {
     type Output = u8;
     fn index(&self, idx: usize) -> &Self::Output {
         &self.0[idx]
     }
 }
 
-macro_rules! impl_fmt {
+impl From<Digest> for [u8; 16] {
+    fn from(d: Digest) -> Self {
+        d.0
+    }
+}
+
+macro_rules! implement {
     ($trai:ident, $fmt:expr) => {
         impl fmt::$trai for Digest {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -83,19 +62,11 @@ macro_rules! impl_fmt {
     }
 }
 
-impl_fmt!(LowerHex, "{:02x}");
-impl_fmt!(UpperHex, "{:02X}");
+implement!(LowerHex, "{:02x}");
+implement!(UpperHex, "{:02X}");
 
 
 /// A context.
-///
-/// This type allows to stream the hash calculation, instead of doing it
-/// on one big chunk of memory. You can just call the `consume()` method
-/// whenever new data is available. When all data has been fed into the
-/// context, you can call `compute()` to get the resulting digest.
-///
-/// This context has a fixed size and will not allocate any memory on the
-/// heap!
 #[derive(Copy)]
 pub struct Context {
   handled: [u32; 2],
@@ -211,8 +182,6 @@ impl From<Context> for Digest {
     }
 }
 
-// We need to manually implement `Clone`, because it's not implemented for
-// array of size 64.
 impl Clone for Context {
     #[inline]
     fn clone(&self) -> Context {
@@ -221,9 +190,6 @@ impl Clone for Context {
 }
 
 /// Compute the digest of data.
-///
-/// This is a shorthand for manually creating a `Context`, writing data
-/// into it and calling `compute()`.
 #[inline]
 pub fn compute<A: AsRef<[u8]>>(data: A) -> Digest {
     let mut context = Context::new();
@@ -391,7 +357,7 @@ fn transform(buffer: &mut [u32; 4], input: &[u32; 16]) {
 mod tests {
     #[test]
     fn compute() {
-        use super::*;
+        use super::compute;
 
         let inputs = [
             "",
@@ -414,8 +380,7 @@ mod tests {
         ];
 
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
-            let digest = compute(input);
-            assert_eq!(format!("{:x}", digest), output);
+            assert_eq!(format!("{:x}", compute(input)), output);
         }
     }
 }
