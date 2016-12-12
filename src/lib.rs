@@ -15,7 +15,7 @@
 use std::{fmt, mem};
 use std::convert::From;
 use std::io::{Result, Write};
-use std::ops::{Deref, Index};
+use std::ops::{Deref, DerefMut, Index};
 
 /// A digest.
 pub struct Digest(pub [u8; 16]);
@@ -25,6 +25,12 @@ impl Deref for Digest {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Digest {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
