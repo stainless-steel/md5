@@ -97,18 +97,18 @@ impl Context {
     }
 
     /// Consume data.
-    pub fn consume(&mut self, data: &[u8]) {
+    pub fn consume<A: AsRef<[u8]>>(&mut self, data: A) {
         let mut input: [u32; 16] = unsafe { mem::uninitialized() };
         let mut k = ((self.handled[0] >> 3) & 0x3F) as usize;
 
-        let length = data.len() as u32;
+        let length = data.as_ref().len() as u32;
         if (self.handled[0] + (length << 3)) < self.handled[0] {
             self.handled[1] += 1;
         }
         self.handled[0] += length << 3;
         self.handled[1] += length >> 29;
 
-        for &value in data {
+        for &value in data.as_ref() {
             self.input[k] = value;
             k += 1;
             if k != 0x40 {
