@@ -23,18 +23,21 @@ pub struct Digest(pub [u8; 16]);
 impl Deref for Digest {
     type Target = [u8; 16];
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for Digest {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 impl From<Digest> for [u8; 16] {
+    #[inline]
     fn from(digest: Digest) -> Self {
         digest.0
     }
@@ -43,8 +46,9 @@ impl From<Digest> for [u8; 16] {
 impl Index<usize> for Digest {
     type Output = u8;
 
-    fn index(&self, idx: usize) -> &Self::Output {
-        &self.0[idx]
+    #[inline]
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.0[i]
     }
 }
 
