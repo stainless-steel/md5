@@ -20,15 +20,6 @@ use std::ops::{Deref, Index};
 /// A digest.
 pub struct Digest(pub [u8; 16]);
 
-impl Digest {
-    /// Returns the raw data as fixed-size array. Of course, you can also
-    /// just access the field via `digest.0`, but this method is more
-    /// descriptive.
-    pub fn raw_data(&self) -> [u8; 16] {
-        self.0
-    }
-}
-
 impl Deref for Digest {
     type Target = [u8; 16];
     fn deref(&self) -> &Self::Target {
