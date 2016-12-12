@@ -2,7 +2,10 @@
 name = "md5"
 version = "0.2.1"
 license = "Apache-2.0/MIT"
-authors = ["Ivan Ukhov <ivan.ukhov@gmail.com>"]
+authors = [
+    "Ivan Ukhov <ivan.ukhov@gmail.com>",
+    "Lukas Kalbertodt <lukas.kalbertodt@gmail.com>",
+]
 description = "The package provides the MD5 hash function."
 documentation = "https://docs.rs/md5"
 homepage = "https://github.com/stainless-steel/md5"
