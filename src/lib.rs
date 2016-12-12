@@ -15,7 +15,7 @@
 use std::{fmt, mem};
 use std::convert::From;
 use std::io::{Result, Write};
-use std::ops::{Deref, DerefMut, Index};
+use std::ops::{Deref, DerefMut};
 
 /// A digest.
 pub struct Digest(pub [u8; 16]);
@@ -40,15 +40,6 @@ impl From<Digest> for [u8; 16] {
     #[inline]
     fn from(digest: Digest) -> Self {
         digest.0
-    }
-}
-
-impl Index<usize> for Digest {
-    type Output = u8;
-
-    #[inline]
-    fn index(&self, i: usize) -> &Self::Output {
-        &self.0[i]
     }
 }
 
