@@ -28,17 +28,17 @@ impl Deref for Digest {
     }
 }
 
+impl From<Digest> for [u8; 16] {
+    fn from(digest: Digest) -> Self {
+        digest.0
+    }
+}
+
 impl Index<usize> for Digest {
     type Output = u8;
 
     fn index(&self, idx: usize) -> &Self::Output {
         &self.0[idx]
-    }
-}
-
-impl From<Digest> for [u8; 16] {
-    fn from(digest: Digest) -> Self {
-        digest.0
     }
 }
 
@@ -155,16 +155,10 @@ impl Context {
     }
 }
 
-impl Write for Context {
+impl Clone for Context {
     #[inline]
-    fn write(&mut self, data: &[u8]) -> Result<usize> {
-        self.consume(data);
-        Ok(data.len())
-    }
-
-    #[inline]
-    fn flush(&mut self) -> Result<()> {
-        Ok(())
+    fn clone(&self) -> Context {
+        *self
     }
 }
 
@@ -175,10 +169,16 @@ impl From<Context> for Digest {
     }
 }
 
-impl Clone for Context {
+impl Write for Context {
     #[inline]
-    fn clone(&self) -> Context {
-        *self
+    fn write(&mut self, data: &[u8]) -> Result<usize> {
+        self.consume(data);
+        Ok(data.len())
+    }
+
+    #[inline]
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
     }
 }
 
