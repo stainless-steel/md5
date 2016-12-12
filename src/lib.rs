@@ -4,8 +4,7 @@
 //!
 //! ```
 //! let digest = md5::compute(b"abcdefghijklmnopqrstuvwxyz");
-//! assert_eq!(digest, [0xc3, 0xfc, 0xd3, 0xd7, 0x61, 0x92, 0xe4, 0x00,
-//!                     0x7d, 0xfb, 0x49, 0x6c, 0xca, 0x67, 0xe1, 0x3b]);
+//! assert_eq!(format!("{:x}", digest), "c3fcd3d76192e4007dfb496cca67e13b");
 //! ```
 //!
 //! [1]: https://en.wikipedia.org/wiki/MD5
@@ -15,10 +14,48 @@
 
 use std::convert::From;
 use std::io::{Result, Write};
-use std::mem;
+use std::{fmt, mem};
+use std::ops::{Deref, Index};
 
 /// A digest.
-pub type Digest = [u8; 16];
+pub struct Digest(pub [u8; 16]);
+
+impl Deref for Digest {
+    type Target = [u8; 16];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Index<usize> for Digest {
+    type Output = u8;
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.0[idx]
+    }
+}
+
+impl From<Digest> for [u8; 16] {
+    fn from(d: Digest) -> Self {
+        d.0
+    }
+}
+
+macro_rules! implement {
+    ($trai:ident, $fmt:expr) => {
+        impl fmt::$trai for Digest {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                for byte in &self.0 {
+                    try!(write!(f, $fmt, byte));
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
+implement!(LowerHex, "{:02x}");
+implement!(UpperHex, "{:02X}");
+
 
 /// A context.
 #[derive(Copy)]
@@ -51,18 +88,18 @@ impl Context {
     }
 
     /// Consume data.
-    pub fn consume(&mut self, data: &[u8]) {
+    pub fn consume<A: AsRef<[u8]>>(&mut self, data: A) {
         let mut input: [u32; 16] = unsafe { mem::uninitialized() };
         let mut k = ((self.handled[0] >> 3) & 0x3F) as usize;
 
-        let length = data.len() as u32;
+        let length = data.as_ref().len() as u32;
         if (self.handled[0] + (length << 3)) < self.handled[0] {
             self.handled[1] += 1;
         }
         self.handled[0] += length << 3;
         self.handled[1] += length >> 29;
 
-        for &value in data {
+        for &value in data.as_ref() {
             self.input[k] = value;
             k += 1;
             if k != 0x40 {
@@ -101,7 +138,7 @@ impl Context {
         }
         transform(&mut self.buffer, &input);
 
-        let mut digest: Digest = unsafe { mem::uninitialized() };
+        let mut digest: [u8; 16] = unsafe { mem::uninitialized() };
 
         let mut j = 0;
         for i in 0..4 {
@@ -112,7 +149,7 @@ impl Context {
             j += 4;
         }
 
-        digest
+        Digest(digest)
     }
 }
 
@@ -145,9 +182,9 @@ impl Clone for Context {
 
 /// Compute the digest of data.
 #[inline]
-pub fn compute(data: &[u8]) -> Digest {
+pub fn compute<A: AsRef<[u8]>>(data: A) -> Digest {
     let mut context = Context::new();
-    context.consume(data);
+    context.consume(data.as_ref());
     context.compute()
 }
 
@@ -309,20 +346,10 @@ fn transform(buffer: &mut [u32; 4], input: &[u32; 16]) {
 
 #[cfg(test)]
 mod tests {
-    macro_rules! digest(
-        ($string:expr) => ({
-            let mut context = ::Context::new();
-            context.consume($string.as_bytes());
-            let mut digest = String::with_capacity(2 * 16);
-            for x in &context.compute()[..] {
-                digest.push_str(&format!("{:02x}", x));
-            }
-            digest
-        });
-    );
-
     #[test]
     fn compute() {
+        use super::compute;
+
         let inputs = [
             "",
             "a",
@@ -344,7 +371,7 @@ mod tests {
         ];
 
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
-            assert_eq!(&digest!(input)[..], output);
+            assert_eq!(format!("{:x}", compute(input)), output);
         }
     }
 }
