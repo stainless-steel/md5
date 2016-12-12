@@ -384,4 +384,12 @@ mod tests {
             assert_eq!(format!("{:x}", ::compute(input)), output);
         }
     }
+
+    #[test]
+    fn index() {
+        let mut digest = ::compute(b"abc");
+        assert_eq!(digest[0], 0x90);
+        assert_eq!(&digest[0], &0x90);
+        assert_eq!(&mut digest[0], &mut 0x90);
+    }
 }
