@@ -90,7 +90,7 @@ impl Context {
     }
 
     /// Consume data.
-    pub fn consume<A: AsRef<[u8]>>(&mut self, data: A) {
+    pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         let mut input: [u32; 16] = unsafe { mem::uninitialized() };
         let mut k = ((self.handled[0] >> 3) & 0x3F) as usize;
 
@@ -185,7 +185,7 @@ impl Write for Context {
 
 /// Compute the digest of data.
 #[inline]
-pub fn compute<A: AsRef<[u8]>>(data: A) -> Digest {
+pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut context = Context::new();
     context.consume(data.as_ref());
     context.compute()
