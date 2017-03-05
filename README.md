@@ -1,8 +1,6 @@
-# MD5 [![Version][version-img]][version-url] [![Status][status-img]][status-url]
+# MD5 [![Package][package-img]][package-url] [![Documentation][documentation-img]][documentation-url] [![Build][build-img]][build-url]
 
 The package provides the [MD5][1] hash function.
-
-## [Documentation][documentation]
 
 ## Example
 
@@ -19,8 +17,9 @@ will be licensed according to the terms given in [LICENSE.md](LICENSE.md).
 
 [1]: https://en.wikipedia.org/wiki/MD5
 
-[documentation]: https://docs.rs/md5
-[status-img]: https://travis-ci.org/stainless-steel/md5.svg?branch=master
-[status-url]: https://travis-ci.org/stainless-steel/md5
-[version-img]: https://img.shields.io/crates/v/md5.svg
-[version-url]: https://crates.io/crates/md5
+[build-img]: https://travis-ci.org/stainless-steel/md5.svg?branch=master
+[build-url]: https://travis-ci.org/stainless-steel/md5
+[documentation-img]: https://docs.rs/md5/badge.svg
+[documentation-url]: https://docs.rs/md5
+[package-img]: https://img.shields.io/crates/v/md5.svg
+[package-url]: https://crates.io/crates/md5
