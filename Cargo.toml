@@ -12,4 +12,4 @@ documentation = "https://docs.rs/md5"
 homepage = "https://github.com/stainless-steel/md5"
 repository = "https://github.com/stainless-steel/md5"
 categories = ["algorithms", "cryptography"]
-keywords = ["checksum", "digest", "hash"]
+keywords = ["checksum", "digest", "hash", "md5"]
