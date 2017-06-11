@@ -2,6 +2,19 @@
 
 The package provides the [MD5][1] hash function.
 
+## Security Warning
+
+This crate is provided for the purposes of interoperability with protocols and
+systems which mandate the use of MD5.
+
+However, MD5 should be considered [cryptographically broken and unsuitable for
+further use][VU836068]. Collision attacks against MD5 are both practical and
+trivial, and [theoretical attacks against MD5's preimage resistance have been
+found][preimage].
+
+[RFC6151] advises no new protocols be designed with any MD5-based constructions,
+including HMAC-MD5.
+
 ## Example
 
 ```rust
@@ -23,3 +36,7 @@ will be licensed according to the terms given in [LICENSE.md](LICENSE.md).
 [documentation-url]: https://docs.rs/md5
 [package-img]: https://img.shields.io/crates/v/md5.svg
 [package-url]: https://crates.io/crates/md5
+
+[VU836068]: https://www.kb.cert.org/vuls/id/836068
+[preimage]: https://dl.acm.org/citation.cfm?id=1724151
+[RFC6151]: https://tools.ietf.org/html/rfc6151
