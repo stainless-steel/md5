@@ -2,6 +2,13 @@
 
 The package provides the [MD5][1] hash function.
 
+## Example
+
+```rust
+let digest = md5::compute(b"abcdefghijklmnopqrstuvwxyz");
+assert_eq!(format!("{:x}", digest), "c3fcd3d76192e4007dfb496cca67e13b");
+```
+
 ## Security Warning
 
 This crate is provided for the purposes of interoperability with protocols and
@@ -14,13 +21,6 @@ found][preimage].
 
 [RFC6151] advises no new protocols be designed with any MD5-based constructions,
 including HMAC-MD5.
-
-## Example
-
-```rust
-let digest = md5::compute(b"abcdefghijklmnopqrstuvwxyz");
-assert_eq!(format!("{:x}", digest), "c3fcd3d76192e4007dfb496cca67e13b");
-```
 
 ## Contribution
 
