@@ -33,6 +33,7 @@ use std::io::{Result, Write};
 use std::ops::{Deref, DerefMut};
 
 /// A digest.
+#[derive(PartialEq, Eq, Copy, Clone)]
 pub struct Digest(pub [u8; 16]);
 
 impl Deref for Digest {
