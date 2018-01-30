@@ -4,10 +4,10 @@ version = "0.3.7"
 license = "Apache-2.0/MIT"
 authors = [
     "Ivan Ukhov <ivan.ukhov@gmail.com>",
+    "Kamal Ahmad <shibe@openmailbox.org>",
     "Konstantin Stepanov <milezv@gmail.com>",
     "Lukas Kalbertodt <lukas.kalbertodt@gmail.com>",
     "Nathan Musoke <nathan.musoke@gmail.com>",
-    "Seth Dusek <shibe@openmailbox.org>",
     "Tony Arcieri <bascule@gmail.com>",
 ]
 description = "The package provides the MD5 hash function."
