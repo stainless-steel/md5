@@ -27,7 +27,7 @@
 // The implementation is based on:
 // http://people.csail.mit.edu/rivest/Md5.c
 
-use std::{fmt, mem};
+use std::fmt;
 use std::convert::From;
 use std::io::{Result, Write};
 use std::ops::{Deref, DerefMut};
@@ -101,13 +101,13 @@ impl Context {
         Context {
             handled: [0, 0],
             buffer: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
-            input: unsafe { mem::uninitialized() },
+            input: [0u8; 64],
         }
     }
 
     /// Consume data.
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        let mut input: [u32; 16] = unsafe { mem::uninitialized() };
+        let mut input = [0u32; 16];
         let mut k = ((self.handled[0] >> 3) & 0x3F) as usize;
 
         let data = data.as_ref();
@@ -139,7 +139,7 @@ impl Context {
 
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
-        let mut input: [u32; 16] = unsafe { mem::uninitialized() };
+        let mut input = [0u32; 16];
         let k = ((self.handled[0] >> 3) & 0x3F) as usize;
 
         input[14] = self.handled[0];
@@ -157,7 +157,7 @@ impl Context {
         }
         transform(&mut self.buffer, &input);
 
-        let mut digest: [u8; 16] = unsafe { mem::uninitialized() };
+        let mut digest = [0u8; 16];
 
         let mut j = 0;
         for i in 0..4 {
