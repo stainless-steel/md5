@@ -40,6 +40,12 @@ use std::ops::{Deref, DerefMut};
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Digest(pub [u8; 16]);
 
+impl fmt::Debug for Digest {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::UpperHex::fmt(self, formatter)
+    }
+}
+
 impl Deref for Digest {
     type Target = [u8; 16];
 
