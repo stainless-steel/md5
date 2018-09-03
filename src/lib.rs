@@ -27,6 +27,10 @@
 // The implementation is based on:
 // http://people.csail.mit.edu/rivest/Md5.c
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
 use std::fmt;
 use std::convert::From;
 use std::io::{Result, Write};
