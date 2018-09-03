@@ -27,14 +27,24 @@
 // The implementation is based on:
 // http://people.csail.mit.edu/rivest/Md5.c
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
 use std::fmt;
 use std::convert::From;
 use std::io::{Result, Write};
 use std::ops::{Deref, DerefMut};
 
 /// A digest.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Digest(pub [u8; 16]);
+
+impl fmt::Debug for Digest {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::UpperHex::fmt(self, formatter)
+    }
+}
 
 impl Deref for Digest {
     type Target = [u8; 16];
