@@ -38,7 +38,7 @@ pub struct Digest(pub [u8; 16]);
 
 impl fmt::Debug for Digest {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        fmt::UpperHex::fmt(self, formatter)
+        fmt::LowerHex::fmt(self, formatter)
     }
 }
 
