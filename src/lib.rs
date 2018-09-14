@@ -33,8 +33,14 @@ use std::io::{Result, Write};
 use std::ops::{Deref, DerefMut};
 
 /// A digest.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Digest(pub [u8; 16]);
+
+impl fmt::Debug for Digest {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fmt::LowerHex::fmt(self, formatter)
+    }
+}
 
 impl Deref for Digest {
     type Target = [u8; 16];
