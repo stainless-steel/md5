@@ -37,6 +37,7 @@ use std::ops::{Deref, DerefMut};
 pub struct Digest(pub [u8; 16]);
 
 impl fmt::Debug for Digest {
+    #[inline]
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         fmt::LowerHex::fmt(self, formatter)
     }
