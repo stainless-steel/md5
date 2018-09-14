@@ -10,6 +10,7 @@ authors = [
     "Nathan Musoke <nathan.musoke@gmail.com>",
     "Tony Arcieri <bascule@gmail.com>",
     "Wim de With <register@dewith.io>",
+    "Yosef Dinerstein <yosefdi@gmail.com>",
 ]
 description = "The package provides the MD5 hash function."
 documentation = "https://docs.rs/md5"
