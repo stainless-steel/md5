@@ -9,7 +9,7 @@ extern crate test;
 #[bench] fn compute_1000000(bencher: &mut test::Bencher) { compute(1000000, bencher); }
 
 fn compute(size: usize, bencher: &mut test::Bencher) {
-    let data = &vec![0xFFu8; size][..];
+    let data = &vec![0xffu8; size][..];
     bencher.iter(|| {
         test::black_box(md5::compute(data));
     });
