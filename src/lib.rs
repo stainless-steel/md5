@@ -173,6 +173,13 @@ impl Context {
 
         Digest(digest)
     }
+
+    /// Resets the hasher to the starting state
+    #[inline]
+    pub fn reset(&mut self) {
+        self.handled = [0, 0];
+        self.buffer = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
+    }
 }
 
 impl Clone for Context {
@@ -392,6 +399,14 @@ mod tests {
 
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
             assert_eq!(format!("{:x}", ::compute(input)), output);
+        }
+
+        let mut context = ::Context::new();
+        for (input, &output) in inputs.iter().zip(outputs.iter()) {
+            context.reset();
+            context.consume(input);
+            assert_eq!(format!("{:x}", context.compute()), output);
+
         }
     }
 
