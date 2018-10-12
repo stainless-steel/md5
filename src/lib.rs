@@ -115,11 +115,11 @@ impl Context {
 
         let data = data.as_ref();
         let length = data.len() as u32;
-        if (self.handled[0] + (length << 3)) < self.handled[0] {
-            self.handled[1] += 1;
+        if (self.handled[0].wrapping_add(length << 3)) < self.handled[0] {
+            self.handled[1] = self.handled[1].wrapping_add(1);
         }
-        self.handled[0] += length << 3;
-        self.handled[1] += length >> 29;
+        self.handled[0] = self.handled[0].wrapping_add(length <<  3);
+        self.handled[1] = self.handled[1].wrapping_add(length >> 29);
 
         for &value in data {
             self.input[k] = value;
