@@ -402,4 +402,15 @@ mod tests {
         assert_eq!(&digest[0], &0x90);
         assert_eq!(&mut digest[0], &mut 0x90);
     }
+
+    #[test]
+    fn overflow() {
+        use std::io::prelude::Write;
+        let data = vec![0; 8 * 1024 * 1024];
+        let mut context = ::Context::new();
+        for _ in 0..64 {
+            context.write(&data).unwrap();
+        }
+        assert_eq!(format!("{:x}", context.compute()), "aa559b4e3523a6c931f08f4df52d58f2");
+    }
 }
