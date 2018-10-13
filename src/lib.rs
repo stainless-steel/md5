@@ -110,9 +110,10 @@ impl Context {
     }
 
     /// Consume data.
-    #[inline]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        consume(self, data.as_ref());
+        for chunk in data.as_ref().chunks(std::u32::MAX as usize) {
+            consume(self, chunk);
+        }
     }
 
     /// Finalize and return the digest.
