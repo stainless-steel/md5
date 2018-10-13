@@ -110,35 +110,9 @@ impl Context {
     }
 
     /// Consume data.
+    #[inline]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        let mut input = [0u32; 16];
-        let mut k = ((self.count[0] >> 3) & 0x3F) as usize;
-
-        let data = data.as_ref();
-        let length = data.len() as u32;
-        self.count[0] = self.count[0].wrapping_add(length << 3);
-        if self.count[0] < length << 3 {
-            self.count[1] = self.count[1].wrapping_add(1);
-        }
-        self.count[1] = self.count[1].wrapping_add(length >> 29);
-
-        for &value in data {
-            self.buffer[k] = value;
-            k += 1;
-            if k != 0x40 {
-                continue;
-            }
-            let mut j = 0;
-            for i in 0..16 {
-                input[i] = ((self.buffer[j + 3] as u32) << 24) |
-                           ((self.buffer[j + 2] as u32) << 16) |
-                           ((self.buffer[j + 1] as u32) <<  8) |
-                           ((self.buffer[j    ] as u32)      );
-                j += 4;
-            }
-            transform(&mut self.state, &input);
-            k = 0;
-        }
+        consume(self, data.as_ref());
     }
 
     /// Finalize and return the digest.
@@ -149,7 +123,7 @@ impl Context {
         input[14] = self.count[0];
         input[15] = self.count[1];
 
-        self.consume(&PADDING[..(if k < 56 { 56 - k } else { 120 - k })]);
+        consume(&mut self, &PADDING[..(if k < 56 { 56 - k } else { 120 - k })]);
 
         let mut j = 0;
         for i in 0..14 {
@@ -209,6 +183,36 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut context = Context::new();
     context.consume(data.as_ref());
     context.compute()
+}
+
+fn consume(Context { buffer, count, state }: &mut Context, data: &[u8]) {
+    let mut input = [0u32; 16];
+    let mut k = ((count[0] >> 3) & 0x3F) as usize;
+
+    let length = data.len() as u32;
+    count[0] = count[0].wrapping_add(length << 3);
+    if count[0] < length << 3 {
+        count[1] = count[1].wrapping_add(1);
+    }
+    count[1] = count[1].wrapping_add(length >> 29);
+
+    for &value in data {
+        buffer[k] = value;
+        k += 1;
+        if k != 0x40 {
+            continue;
+        }
+        let mut j = 0;
+        for i in 0..16 {
+            input[i] = ((buffer[j + 3] as u32) << 24) |
+                       ((buffer[j + 2] as u32) << 16) |
+                       ((buffer[j + 1] as u32) <<  8) |
+                       ((buffer[j    ] as u32)      );
+            j += 4;
+        }
+        transform(state, &input);
+        k = 0;
+    }
 }
 
 fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
