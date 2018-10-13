@@ -126,6 +126,7 @@ impl Context {
 
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
+        use std::mem::transmute;
         let mut input = [0u32; 16];
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
         input[14] = self.count[0];
@@ -134,25 +135,15 @@ impl Context {
             &mut self,
             &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
         );
-        let mut j = 0;
+        let buffer = unsafe { transmute::<&[u8; 64], &[u32; 16]>(&self.buffer) };
         for i in 0..14 {
-            input[i] = ((self.buffer[j + 3] as u32) << 24) |
-                       ((self.buffer[j + 2] as u32) << 16) |
-                       ((self.buffer[j + 1] as u32) <<  8) |
-                       ((self.buffer[j    ] as u32)      );
-            j += 4;
+            input[i] = u32::from_le(buffer[i]);
         }
         transform(&mut self.state, &input);
-        let mut digest = [0u8; 16];
-        let mut j = 0;
         for i in 0..4 {
-            digest[j    ] = ((self.state[i]      ) & 0xff) as u8;
-            digest[j + 1] = ((self.state[i] >>  8) & 0xff) as u8;
-            digest[j + 2] = ((self.state[i] >> 16) & 0xff) as u8;
-            digest[j + 3] = ((self.state[i] >> 24) & 0xff) as u8;
-            j += 4;
+            self.state[i] = self.state[i].to_le();
         }
-        Digest(digest)
+        Digest(unsafe { transmute(self.state) })
     }
 }
 
@@ -192,6 +183,7 @@ fn consume(
     }: &mut Context,
     data: &[u8],
 ) {
+    use std::mem::transmute;
     let mut input = [0u32; 16];
     let mut k = ((count[0] >> 3) & 0x3f) as usize;
     let length = data.len() as u32;
@@ -204,13 +196,9 @@ fn consume(
         buffer[k] = value;
         k += 1;
         if k == 0x40 {
-            let mut j = 0;
+            let buffer = unsafe { transmute::<&[u8; 64], &[u32; 16]>(&buffer) };
             for i in 0..16 {
-                input[i] = ((buffer[j + 3] as u32) << 24) |
-                           ((buffer[j + 2] as u32) << 16) |
-                           ((buffer[j + 1] as u32) <<  8) |
-                           ((buffer[j    ] as u32)      );
-                j += 4;
+                input[i] = u32::from_le(buffer[i]);
             }
             transform(state, &input);
             k = 0;
