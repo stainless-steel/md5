@@ -25,7 +25,8 @@
 //! [VU836068]: https://www.kb.cert.org/vuls/id/836068
 
 // The implementation is based on:
-// http://people.csail.mit.edu/rivest/Md5.c
+// https://people.csail.mit.edu/rivest/Md5.c
+// https://tools.ietf.org/html/rfc1321
 
 use std::convert::From;
 use std::fmt;
@@ -115,11 +116,11 @@ impl Context {
 
         let data = data.as_ref();
         let length = data.len() as u32;
-        if (self.handled[0] + (length << 3)) < self.handled[0] {
-            self.handled[1] += 1;
+        self.handled[0] = self.handled[0].wrapping_add(length << 3);
+        if self.handled[0] < length << 3 {
+            self.handled[1] = self.handled[1].wrapping_add(1);
         }
-        self.handled[0] += length << 3;
-        self.handled[1] += length >> 29;
+        self.handled[1] = self.handled[1].wrapping_add(length >> 29);
 
         for &value in data {
             self.input[k] = value;
@@ -401,5 +402,16 @@ mod tests {
         assert_eq!(digest[0], 0x90);
         assert_eq!(&digest[0], &0x90);
         assert_eq!(&mut digest[0], &mut 0x90);
+    }
+
+    #[test]
+    fn overflow() {
+        use std::io::prelude::Write;
+        let data = vec![0; 8 * 1024 * 1024];
+        let mut context = ::Context::new();
+        for _ in 0..64 {
+            context.write(&data).unwrap();
+        }
+        assert_eq!(format!("{:x}", context.compute()), "aa559b4e3523a6c931f08f4df52d58f2");
     }
 }
