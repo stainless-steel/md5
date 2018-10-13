@@ -182,7 +182,7 @@ impl Write for Context {
 #[inline]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut context = Context::new();
-    context.consume(data.as_ref());
+    context.consume(data);
     context.compute()
 }
 
