@@ -86,9 +86,9 @@ implement!(UpperHex, "{:02X}");
 /// A context.
 #[derive(Copy)]
 pub struct Context {
-    handled: [u32; 2],
-    buffer: [u32; 4],
-    input: [u8; 64],
+    buffer: [u8; 64],
+    count: [u32; 2],
+    state: [u32; 4],
 }
 
 const PADDING: [u8; 64] = [
@@ -103,40 +103,40 @@ impl Context {
     #[inline]
     pub fn new() -> Context {
         Context {
-            handled: [0, 0],
-            buffer: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
-            input: [0u8; 64],
+            buffer: [0u8; 64],
+            count: [0, 0],
+            state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
         }
     }
 
     /// Consume data.
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         let mut input = [0u32; 16];
-        let mut k = ((self.handled[0] >> 3) & 0x3F) as usize;
+        let mut k = ((self.count[0] >> 3) & 0x3F) as usize;
 
         let data = data.as_ref();
         let length = data.len() as u32;
-        self.handled[0] = self.handled[0].wrapping_add(length << 3);
-        if self.handled[0] < length << 3 {
-            self.handled[1] = self.handled[1].wrapping_add(1);
+        self.count[0] = self.count[0].wrapping_add(length << 3);
+        if self.count[0] < length << 3 {
+            self.count[1] = self.count[1].wrapping_add(1);
         }
-        self.handled[1] = self.handled[1].wrapping_add(length >> 29);
+        self.count[1] = self.count[1].wrapping_add(length >> 29);
 
         for &value in data {
-            self.input[k] = value;
+            self.buffer[k] = value;
             k += 1;
             if k != 0x40 {
                 continue;
             }
             let mut j = 0;
             for i in 0..16 {
-                input[i] = ((self.input[j + 3] as u32) << 24) |
-                           ((self.input[j + 2] as u32) << 16) |
-                           ((self.input[j + 1] as u32) <<  8) |
-                           ((self.input[j    ] as u32)      );
+                input[i] = ((self.buffer[j + 3] as u32) << 24) |
+                           ((self.buffer[j + 2] as u32) << 16) |
+                           ((self.buffer[j + 1] as u32) <<  8) |
+                           ((self.buffer[j    ] as u32)      );
                 j += 4;
             }
-            transform(&mut self.buffer, &input);
+            transform(&mut self.state, &input);
             k = 0;
         }
     }
@@ -144,31 +144,31 @@ impl Context {
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
         let mut input = [0u32; 16];
-        let k = ((self.handled[0] >> 3) & 0x3F) as usize;
+        let k = ((self.count[0] >> 3) & 0x3F) as usize;
 
-        input[14] = self.handled[0];
-        input[15] = self.handled[1];
+        input[14] = self.count[0];
+        input[15] = self.count[1];
 
         self.consume(&PADDING[..(if k < 56 { 56 - k } else { 120 - k })]);
 
         let mut j = 0;
         for i in 0..14 {
-            input[i] = ((self.input[j + 3] as u32) << 24) |
-                       ((self.input[j + 2] as u32) << 16) |
-                       ((self.input[j + 1] as u32) <<  8) |
-                       ((self.input[j    ] as u32)      );
+            input[i] = ((self.buffer[j + 3] as u32) << 24) |
+                       ((self.buffer[j + 2] as u32) << 16) |
+                       ((self.buffer[j + 1] as u32) <<  8) |
+                       ((self.buffer[j    ] as u32)      );
             j += 4;
         }
-        transform(&mut self.buffer, &input);
+        transform(&mut self.state, &input);
 
         let mut digest = [0u8; 16];
 
         let mut j = 0;
         for i in 0..4 {
-            digest[j    ] = ((self.buffer[i]      ) & 0xFF) as u8;
-            digest[j + 1] = ((self.buffer[i] >>  8) & 0xFF) as u8;
-            digest[j + 2] = ((self.buffer[i] >> 16) & 0xFF) as u8;
-            digest[j + 3] = ((self.buffer[i] >> 24) & 0xFF) as u8;
+            digest[j    ] = ((self.state[i]      ) & 0xFF) as u8;
+            digest[j + 1] = ((self.state[i] >>  8) & 0xFF) as u8;
+            digest[j + 2] = ((self.state[i] >> 16) & 0xFF) as u8;
+            digest[j + 3] = ((self.state[i] >> 24) & 0xFF) as u8;
             j += 4;
         }
 
@@ -211,8 +211,8 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     context.compute()
 }
 
-fn transform(buffer: &mut [u32; 4], input: &[u32; 16]) {
-    let (mut a, mut b, mut c, mut d) = (buffer[0], buffer[1], buffer[2], buffer[3]);
+fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
+    let (mut a, mut b, mut c, mut d) = (state[0], state[1], state[2], state[3]);
 
     macro_rules! add(
         ($a:expr, $b:expr) => ($a.wrapping_add($b));
@@ -361,10 +361,10 @@ fn transform(buffer: &mut [u32; 4], input: &[u32; 16]) {
         T!(b, c, d, a, input[ 9], S4, 3951481745);
     }
 
-    buffer[0] = add!(buffer[0], a);
-    buffer[1] = add!(buffer[1], b);
-    buffer[2] = add!(buffer[2], c);
-    buffer[3] = add!(buffer[3], d);
+    state[0] = add!(state[0], a);
+    state[1] = add!(state[1], b);
+    state[2] = add!(state[2], c);
+    state[3] = add!(state[3], d);
 }
 
 #[cfg(test)]
