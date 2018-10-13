@@ -31,6 +31,7 @@
 use std::convert;
 use std::fmt;
 use std::io;
+use std::mem;
 use std::ops;
 
 /// A digest.
@@ -103,7 +104,7 @@ impl Context {
     #[inline]
     pub fn new() -> Context {
         Context {
-            buffer: [0; 64],
+            buffer: unsafe { mem::uninitialized() },
             count: [0, 0],
             state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
         }
@@ -126,14 +127,13 @@ impl Context {
 
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
-        use std::mem::transmute;
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
         let count = self.count;
         consume(
             &mut self,
             &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
         );
-        let buffer = unsafe { transmute::<&mut [u8; 64], &mut [u32; 16]>(&mut self.buffer) };
+        let buffer = unsafe { mem::transmute::<&mut [u8; 64], &mut [u32; 16]>(&mut self.buffer) };
         for i in 0..14 {
             buffer[i] = u32::from_le(buffer[i]);
         }
@@ -143,7 +143,7 @@ impl Context {
         for i in 0..4 {
             self.state[i] = self.state[i].to_le();
         }
-        Digest(unsafe { transmute(self.state) })
+        Digest(unsafe { mem::transmute(self.state) })
     }
 }
 
@@ -183,7 +183,6 @@ fn consume(
     }: &mut Context,
     data: &[u8],
 ) {
-    use std::mem::transmute;
     let mut k = ((count[0] >> 3) & 0x3f) as usize;
     let length = data.len() as u32;
     count[0] = count[0].wrapping_add(length << 3);
@@ -195,7 +194,7 @@ fn consume(
         buffer[k] = value;
         k += 1;
         if k == 0x40 {
-            let buffer = unsafe { transmute::<&mut [u8; 64], &mut [u32; 16]>(buffer) };
+            let buffer = unsafe { mem::transmute::<&mut [u8; 64], &mut [u32; 16]>(buffer) };
             for i in 0..16 {
                 buffer[i] = u32::from_le(buffer[i]);
             }
