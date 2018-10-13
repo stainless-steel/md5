@@ -122,7 +122,10 @@ impl Context {
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
         input[14] = self.count[0];
         input[15] = self.count[1];
-        consume(&mut self, &PADDING[..(if k < 56 { 56 - k } else { 120 - k })]);
+        consume(
+            &mut self,
+            &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
+        );
         let mut j = 0;
         for i in 0..14 {
             input[i] = ((self.buffer[j + 3] as u32) << 24) |
@@ -180,7 +183,14 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     context.compute()
 }
 
-fn consume(Context { buffer, count, state }: &mut Context, data: &[u8]) {
+fn consume(
+    Context {
+        buffer,
+        count,
+        state,
+    }: &mut Context,
+    data: &[u8],
+) {
     let mut input = [0u32; 16];
     let mut k = ((count[0] >> 3) & 0x3f) as usize;
     let length = data.len() as u32;
@@ -392,7 +402,10 @@ mod tests {
         for _ in 0..64 {
             context.write(&data).unwrap();
         }
-        assert_eq!(format!("{:x}", context.compute()), "aa559b4e3523a6c931f08f4df52d58f2");
+        assert_eq!(
+            format!("{:x}", context.compute()),
+            "aa559b4e3523a6c931f08f4df52d58f2"
+        );
     }
 
     #[test]
@@ -402,6 +415,9 @@ mod tests {
         let data = vec![0; MAX as usize + 1];
         let mut context = ::Context::new();
         context.write(&data).unwrap();
-        assert_eq!(format!("{:x}", context.compute()), "c9a5a6878d97b48cc965c1e41859f034");
+        assert_eq!(
+            format!("{:x}", context.compute()),
+            "c9a5a6878d97b48cc965c1e41859f034"
+        );
     }
 }
