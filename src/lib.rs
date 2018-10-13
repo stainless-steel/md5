@@ -119,7 +119,7 @@ impl Context {
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
         let mut input = [0u32; 16];
-        let k = ((self.count[0] >> 3) & 0x3F) as usize;
+        let k = ((self.count[0] >> 3) & 0x3f) as usize;
         input[14] = self.count[0];
         input[15] = self.count[1];
         consume(&mut self, &PADDING[..(if k < 56 { 56 - k } else { 120 - k })]);
@@ -135,10 +135,10 @@ impl Context {
         let mut digest = [0u8; 16];
         let mut j = 0;
         for i in 0..4 {
-            digest[j    ] = ((self.state[i]      ) & 0xFF) as u8;
-            digest[j + 1] = ((self.state[i] >>  8) & 0xFF) as u8;
-            digest[j + 2] = ((self.state[i] >> 16) & 0xFF) as u8;
-            digest[j + 3] = ((self.state[i] >> 24) & 0xFF) as u8;
+            digest[j    ] = ((self.state[i]      ) & 0xff) as u8;
+            digest[j + 1] = ((self.state[i] >>  8) & 0xff) as u8;
+            digest[j + 2] = ((self.state[i] >> 16) & 0xff) as u8;
+            digest[j + 3] = ((self.state[i] >> 24) & 0xff) as u8;
             j += 4;
         }
         Digest(digest)
@@ -182,7 +182,7 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
 
 fn consume(Context { buffer, count, state }: &mut Context, data: &[u8]) {
     let mut input = [0u32; 16];
-    let mut k = ((count[0] >> 3) & 0x3F) as usize;
+    let mut k = ((count[0] >> 3) & 0x3f) as usize;
     let length = data.len() as u32;
     count[0] = count[0].wrapping_add(length << 3);
     if count[0] < length << 3 {
