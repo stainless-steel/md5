@@ -192,19 +192,18 @@ fn consume(Context { buffer, count, state }: &mut Context, data: &[u8]) {
     for &value in data {
         buffer[k] = value;
         k += 1;
-        if k != 0x40 {
-            continue;
+        if k == 0x40 {
+            let mut j = 0;
+            for i in 0..16 {
+                input[i] = ((buffer[j + 3] as u32) << 24) |
+                           ((buffer[j + 2] as u32) << 16) |
+                           ((buffer[j + 1] as u32) <<  8) |
+                           ((buffer[j    ] as u32)      );
+                j += 4;
+            }
+            transform(state, &input);
+            k = 0;
         }
-        let mut j = 0;
-        for i in 0..16 {
-            input[i] = ((buffer[j + 3] as u32) << 24) |
-                       ((buffer[j + 2] as u32) << 16) |
-                       ((buffer[j + 1] as u32) <<  8) |
-                       ((buffer[j    ] as u32)      );
-            j += 4;
-        }
-        transform(state, &input);
-        k = 0;
     }
 }
 
