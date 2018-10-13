@@ -405,7 +405,7 @@ mod tests {
     }
 
     #[test]
-    fn overflow() {
+    fn overflow_count() {
         use std::io::prelude::Write;
         let data = vec![0; 8 * 1024 * 1024];
         let mut context = ::Context::new();
@@ -413,5 +413,15 @@ mod tests {
             context.write(&data).unwrap();
         }
         assert_eq!(format!("{:x}", context.compute()), "aa559b4e3523a6c931f08f4df52d58f2");
+    }
+
+    #[test]
+    fn overflow_length() {
+        use std::io::prelude::Write;
+        use std::u32::MAX;
+        let data = vec![0; MAX as usize + 1];
+        let mut context = ::Context::new();
+        context.write(&data).unwrap();
+        assert_eq!(format!("{:x}", context.compute()), "c9a5a6878d97b48cc965c1e41859f034");
     }
 }
