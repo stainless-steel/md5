@@ -25,7 +25,8 @@
 //! [VU836068]: https://www.kb.cert.org/vuls/id/836068
 
 // The implementation is based on:
-// http://people.csail.mit.edu/rivest/Md5.c
+// https://people.csail.mit.edu/rivest/Md5.c
+// https://tools.ietf.org/html/rfc1321
 
 use std::convert::From;
 use std::fmt;
@@ -115,10 +116,10 @@ impl Context {
 
         let data = data.as_ref();
         let length = data.len() as u32;
-        if (self.handled[0].wrapping_add(length << 3)) < self.handled[0] {
+        self.handled[0] = self.handled[0].wrapping_add(length << 3);
+        if self.handled[0] < length << 3 {
             self.handled[1] = self.handled[1].wrapping_add(1);
         }
-        self.handled[0] = self.handled[0].wrapping_add(length <<  3);
         self.handled[1] = self.handled[1].wrapping_add(length >> 29);
 
         for &value in data {
