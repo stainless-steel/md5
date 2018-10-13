@@ -127,19 +127,19 @@ impl Context {
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
         use std::mem::transmute;
-        let mut input = [0u32; 16];
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
-        input[14] = self.count[0];
-        input[15] = self.count[1];
+        let count = self.count;
         consume(
             &mut self,
             &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
         );
-        let buffer = unsafe { transmute::<&[u8; 64], &[u32; 16]>(&self.buffer) };
+        let buffer = unsafe { transmute::<&mut [u8; 64], &mut [u32; 16]>(&mut self.buffer) };
         for i in 0..14 {
-            input[i] = u32::from_le(buffer[i]);
+            buffer[i] = u32::from_le(buffer[i]);
         }
-        transform(&mut self.state, &input);
+        buffer[14] = count[0];
+        buffer[15] = count[1];
+        transform(&mut self.state, &buffer);
         for i in 0..4 {
             self.state[i] = self.state[i].to_le();
         }
@@ -184,7 +184,6 @@ fn consume(
     data: &[u8],
 ) {
     use std::mem::transmute;
-    let mut input = [0u32; 16];
     let mut k = ((count[0] >> 3) & 0x3f) as usize;
     let length = data.len() as u32;
     count[0] = count[0].wrapping_add(length << 3);
@@ -196,11 +195,11 @@ fn consume(
         buffer[k] = value;
         k += 1;
         if k == 0x40 {
-            let buffer = unsafe { transmute::<&[u8; 64], &[u32; 16]>(&buffer) };
+            let buffer = unsafe { transmute::<&mut [u8; 64], &mut [u32; 16]>(buffer) };
             for i in 0..16 {
-                input[i] = u32::from_le(buffer[i]);
+                buffer[i] = u32::from_le(buffer[i]);
             }
-            transform(state, &input);
+            transform(state, &buffer);
             k = 0;
         }
     }
