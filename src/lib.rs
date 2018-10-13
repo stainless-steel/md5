@@ -103,7 +103,7 @@ impl Context {
     #[inline]
     pub fn new() -> Context {
         Context {
-            buffer: [0u8; 64],
+            buffer: [0; 64],
             count: [0, 0],
             state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
         }
