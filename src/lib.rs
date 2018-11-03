@@ -84,7 +84,7 @@ implement!(LowerHex, "{:02x}");
 implement!(UpperHex, "{:02X}");
 
 /// A context.
-#[derive(Copy)]
+#[derive(Clone)]
 pub struct Context {
     buffer: [u8; 64],
     count: [u32; 2],
@@ -145,13 +145,6 @@ impl Context {
             j += 4;
         }
         Digest(digest)
-    }
-}
-
-impl Clone for Context {
-    #[inline]
-    fn clone(&self) -> Context {
-        *self
     }
 }
 
