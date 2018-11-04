@@ -128,18 +128,11 @@ impl Context {
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
-        let count = self.count;
-        consume(
-            &mut self,
-            &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
-        );
-        let buffer = unsafe { mem::transmute::<&mut [u8; 64], &mut [u32; 16]>(&mut self.buffer) };
-        for i in 0..14 {
-            buffer[i] = u32::from_le(buffer[i]);
-        }
-        buffer[14] = count[0];
-        buffer[15] = count[1];
-        transform(&mut self.state, &buffer);
+        let padding = &PADDING[..(if k < 56 { 56 - k } else { 120 - k })];
+        let count = [self.count[0].to_le(), self.count[1].to_le()];
+        let count = unsafe { mem::transmute::<&[u32; 2], &[u8; 8]>(&count) };
+        consume(&mut self, padding);
+        consume(&mut self, count);
         for i in 0..4 {
             self.state[i] = self.state[i].to_le();
         }
