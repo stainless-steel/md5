@@ -402,6 +402,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_pointer_width = "64")]
     fn overflow_length() {
         use std::io::prelude::Write;
         use std::u32::MAX;
