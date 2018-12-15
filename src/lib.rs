@@ -110,6 +110,14 @@ impl Context {
     }
 
     /// Consume data.
+    #[cfg(target_pointer_width = "32")]
+    #[inline]
+    pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
+        consume(self, data.as_ref());
+    }
+
+    /// Consume data.
+    #[cfg(target_pointer_width = "64")]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         for chunk in data.as_ref().chunks(std::u32::MAX as usize) {
             consume(self, chunk);
