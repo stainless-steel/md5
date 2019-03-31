@@ -371,6 +371,7 @@ mod tests {
             "message digest",
             "abcdefghijklmnopqrstuvwxyz",
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+            "0123456789012345678901234567890123456789012345678901234567890123",
             "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
         ];
         let outputs = [
@@ -380,6 +381,7 @@ mod tests {
             "f96b697d7cb7938d525a2f31aaf161d0",
             "c3fcd3d76192e4007dfb496cca67e13b",
             "d174ab98d277d9f5a5611c2c9f419d9f",
+            "7f7bfd348709deeaace19e3f535f8c54",
             "57edf4a22be3c955ac49da2e2107b67a",
         ];
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
