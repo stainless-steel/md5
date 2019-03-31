@@ -33,6 +33,7 @@ use std::fmt;
 use std::io;
 use std::mem;
 use std::ops;
+use std::ptr;
 
 /// A digest.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
@@ -183,17 +184,20 @@ fn consume(
         count[1] = count[1].wrapping_add(1);
     }
     count[1] = count[1].wrapping_add(length >> 29);
-    for value in data {
-        buffer[k] = *value;
-        k += 1;
-        if k == 0x40 {
-            let buffer = unsafe { mem::transmute::<&mut [u8; 64], &mut [u32; 16]>(buffer) };
-            for value in buffer.iter_mut() {
-                *value = u32::from_le(*value);
-            }
-            transform(state, &buffer);
-            k = 0;
+    let mut done = 0;
+    let mut left = data.len();
+    while left > 0 {
+        let count = if k + left <= 0x40 { left } else { 0x40 - k };
+        unsafe { ptr::copy_nonoverlapping(&data[done], &mut buffer[k], count) };
+        k = (k + count) % 0x40;
+        if k > 0 { break }
+        done += count;
+        left -= count;
+        let buffer = unsafe { mem::transmute::<&mut [u8; 64], &mut [u32; 16]>(buffer) };
+        for value in buffer.iter_mut() {
+            *value = u32::from_le(*value);
         }
+        transform(state, &buffer);
     }
 }
 
