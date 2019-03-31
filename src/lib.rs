@@ -187,9 +187,9 @@ fn consume(
     let mut done = 0;
     let mut left = data.len();
     while left > 0 {
-        let count = if k + left <= 0x40 { left } else { 0x40 - k };
+        let count = if k + left <= 64 { left } else { 64 - k };
         unsafe { ptr::copy_nonoverlapping(&data[done], &mut buffer[k], count) };
-        k = (k + count) % 0x40;
+        k = (k + count) % 64;
         if k > 0 { break }
         done += count;
         left -= count;
