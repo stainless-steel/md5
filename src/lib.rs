@@ -133,8 +133,8 @@ impl Context {
         let count = unsafe { mem::transmute::<&[u32; 2], &[u8; 8]>(&count) };
         consume(&mut self, padding);
         consume(&mut self, count);
-        for i in 0..4 {
-            self.state[i] = self.state[i].to_le();
+        for value in self.state.iter_mut() {
+            *value = value.to_le();
         }
         Digest(unsafe { mem::transmute(self.state) })
     }
@@ -183,13 +183,13 @@ fn consume(
         count[1] = count[1].wrapping_add(1);
     }
     count[1] = count[1].wrapping_add(length >> 29);
-    for &value in data {
-        buffer[k] = value;
+    for value in data {
+        buffer[k] = *value;
         k += 1;
         if k == 0x40 {
             let buffer = unsafe { mem::transmute::<&mut [u8; 64], &mut [u32; 16]>(buffer) };
-            for i in 0..16 {
-                buffer[i] = u32::from_le(buffer[i]);
+            for value in buffer.iter_mut() {
+                *value = u32::from_le(*value);
             }
             transform(state, &buffer);
             k = 0;
