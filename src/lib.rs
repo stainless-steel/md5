@@ -71,8 +71,8 @@ macro_rules! implement {
     ($kind:ident, $format:expr) => {
         impl fmt::$kind for Digest {
             fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                for byte in &self.0 {
-                    try!(write!(formatter, $format, byte));
+                for value in &self.0 {
+                    try!(write!(formatter, $format, value));
                 }
                 Ok(())
             }
