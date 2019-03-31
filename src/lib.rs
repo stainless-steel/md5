@@ -28,14 +28,21 @@
 // https://people.csail.mit.edu/rivest/Md5.c
 // https://tools.ietf.org/html/rfc1321
 
-use std::convert::From;
+use std::convert;
 use std::fmt;
-use std::io::{Result, Write};
-use std::ops::{Deref, DerefMut};
+use std::io;
+use std::ops;
 
 /// A digest.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Digest(pub [u8; 16]);
+
+impl convert::From<Digest> for [u8; 16] {
+    #[inline]
+    fn from(digest: Digest) -> Self {
+        digest.0
+    }
+}
 
 impl fmt::Debug for Digest {
     #[inline]
@@ -44,7 +51,7 @@ impl fmt::Debug for Digest {
     }
 }
 
-impl Deref for Digest {
+impl ops::Deref for Digest {
     type Target = [u8; 16];
 
     #[inline]
@@ -53,17 +60,10 @@ impl Deref for Digest {
     }
 }
 
-impl DerefMut for Digest {
+impl ops::DerefMut for Digest {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
-    }
-}
-
-impl From<Digest> for [u8; 16] {
-    #[inline]
-    fn from(digest: Digest) -> Self {
-        digest.0
     }
 }
 
@@ -156,22 +156,22 @@ impl Context {
     }
 }
 
-impl From<Context> for Digest {
+impl convert::From<Context> for Digest {
     #[inline]
     fn from(context: Context) -> Digest {
         context.compute()
     }
 }
 
-impl Write for Context {
+impl io::Write for Context {
     #[inline]
-    fn write(&mut self, data: &[u8]) -> Result<usize> {
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
         self.consume(data);
         Ok(data.len())
     }
 
     #[inline]
-    fn flush(&mut self) -> Result<()> {
+    fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
 }
