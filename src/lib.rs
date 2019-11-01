@@ -31,9 +31,34 @@
 use std::convert;
 use std::fmt;
 use std::io;
-use std::mem;
 use std::ops;
-use std::ptr;
+
+macro_rules! convert_u8_to_u32 {
+    (ref mut $count:expr, $data:expr) => {
+        unsafe { std::mem::transmute::<&mut [u8; $count], &mut [u32; $count / 4]>($data) }
+    };
+}
+
+macro_rules! convert_u32_to_u8 {
+    (ref $count:expr, $data:expr) => {
+        unsafe { std::mem::transmute::<&[u32; $count], &[u8; 4 * $count]>($data) }
+    };
+    ($count:expr, $data:expr) => {
+        unsafe { std::mem::transmute::<[u32; $count], [u8; 4 * $count]>($data) }
+    };
+}
+
+macro_rules! copy_u8 {
+    ($source:expr, $destination:expr, $count:expr) => {
+        unsafe { std::ptr::copy_nonoverlapping($source, $destination, $count) }
+    };
+}
+
+macro_rules! initialize_arbitrarily {
+    () => {
+        unsafe { std::mem::uninitialized() }
+    };
+}
 
 /// A digest.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
@@ -105,7 +130,7 @@ impl Context {
     #[inline]
     pub fn new() -> Context {
         Context {
-            buffer: unsafe { mem::uninitialized() },
+            buffer: initialize_arbitrarily!(),
             count: [0, 0],
             state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
         }
@@ -131,13 +156,13 @@ impl Context {
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
         let padding = &PADDING[..(if k < 56 { 56 - k } else { 120 - k })];
         let count = [self.count[0].to_le(), self.count[1].to_le()];
-        let count = unsafe { mem::transmute::<&[u32; 2], &[u8; 8]>(&count) };
+        let count = convert_u32_to_u8!(ref 2, &count);
         consume(&mut self, padding);
         consume(&mut self, count);
         for value in self.state.iter_mut() {
             *value = value.to_le();
         }
-        Digest(unsafe { mem::transmute(self.state) })
+        Digest(convert_u32_to_u8!(4, self.state))
     }
 }
 
@@ -188,12 +213,12 @@ fn consume(
     let mut left = data.len();
     while left > 0 {
         let count = if k + left <= 64 { left } else { 64 - k };
-        unsafe { ptr::copy_nonoverlapping(&data[done], &mut buffer[k], count) };
+        copy_u8!(&data[done], &mut buffer[k], count);
         k = (k + count) % 64;
         if k > 0 { break }
         done += count;
         left -= count;
-        let buffer = unsafe { mem::transmute::<&mut [u8; 64], &mut [u32; 16]>(buffer) };
+        let buffer = convert_u8_to_u32!(ref mut 64, buffer);
         for value in buffer.iter_mut() {
             *value = u32::from_le(*value);
         }
