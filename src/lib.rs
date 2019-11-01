@@ -28,7 +28,7 @@
 // https://people.csail.mit.edu/rivest/Md5.c
 // https://tools.ietf.org/html/rfc1321
 
-#![cfg_attr(not(any(test, feature = "std")), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
 use std as core;
@@ -36,6 +36,7 @@ use std as core;
 use core::convert;
 use core::fmt;
 use core::ops;
+
 #[cfg(feature = "std")]
 use core::io;
 
