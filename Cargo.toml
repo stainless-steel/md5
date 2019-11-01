@@ -19,3 +19,7 @@ repository = "https://github.com/stainless-steel/md5"
 readme = "README.md"
 categories = ["algorithms", "cryptography"]
 keywords = ["checksum", "digest", "hash", "md5"]
+
+[features]
+default = ["std"]
+std = []

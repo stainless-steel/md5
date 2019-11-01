@@ -28,10 +28,16 @@
 // https://people.csail.mit.edu/rivest/Md5.c
 // https://tools.ietf.org/html/rfc1321
 
-use std::convert;
-use std::fmt;
-use std::io;
-use std::ops;
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
+
+#[cfg(feature = "std")]
+use std as core;
+
+use core::convert;
+use core::fmt;
+use core::ops;
+#[cfg(feature = "std")]
+use core::io;
 
 /// A digest.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
@@ -119,7 +125,7 @@ impl Context {
     /// Consume data.
     #[cfg(target_pointer_width = "64")]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        for chunk in data.as_ref().chunks(std::u32::MAX as usize) {
+        for chunk in data.as_ref().chunks(core::u32::MAX as usize) {
             consume(self, chunk);
         }
     }
@@ -163,6 +169,7 @@ impl convert::From<Context> for Digest {
     }
 }
 
+#[cfg(feature = "std")]
 impl io::Write for Context {
     #[inline]
     fn write(&mut self, data: &[u8]) -> io::Result<usize> {
