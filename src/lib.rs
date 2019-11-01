@@ -40,6 +40,33 @@ use core::ops;
 #[cfg(feature = "std")]
 use core::io;
 
+macro_rules! convert_u8_to_u32 {
+    (ref mut $count:expr, $data:expr) => {
+        unsafe { std::mem::transmute::<&mut [u8; $count], &mut [u32; $count / 4]>($data) }
+    };
+}
+
+macro_rules! convert_u32_to_u8 {
+    (ref $count:expr, $data:expr) => {
+        unsafe { std::mem::transmute::<&[u32; $count], &[u8; 4 * $count]>($data) }
+    };
+    ($count:expr, $data:expr) => {
+        unsafe { std::mem::transmute::<[u32; $count], [u8; 4 * $count]>($data) }
+    };
+}
+
+macro_rules! copy_u8 {
+    ($source:expr, $destination:expr, $count:expr) => {
+        unsafe { std::ptr::copy_nonoverlapping($source, $destination, $count) }
+    };
+}
+
+macro_rules! initialize_arbitrarily {
+    () => {
+        unsafe { std::mem::uninitialized() }
+    };
+}
+
 /// A digest.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Digest(pub [u8; 16]);
@@ -110,7 +137,7 @@ impl Context {
     #[inline]
     pub fn new() -> Context {
         Context {
-            buffer: [0; 64],
+            buffer: initialize_arbitrarily!(),
             count: [0, 0],
             state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
         }
@@ -133,33 +160,16 @@ impl Context {
 
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
-        let mut input = [0u32; 16];
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
-        input[14] = self.count[0];
-        input[15] = self.count[1];
-        consume(
-            &mut self,
-            &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
-        );
-        let mut j = 0;
-        for i in 0..14 {
-            input[i] = ((self.buffer[j + 3] as u32) << 24) |
-                       ((self.buffer[j + 2] as u32) << 16) |
-                       ((self.buffer[j + 1] as u32) <<  8) |
-                       ((self.buffer[j    ] as u32)      );
-            j += 4;
+        let padding = &PADDING[..(if k < 56 { 56 - k } else { 120 - k })];
+        let count = [self.count[0].to_le(), self.count[1].to_le()];
+        let count = convert_u32_to_u8!(ref 2, &count);
+        consume(&mut self, padding);
+        consume(&mut self, count);
+        for value in self.state.iter_mut() {
+            *value = value.to_le();
         }
-        transform(&mut self.state, &input);
-        let mut digest = [0u8; 16];
-        let mut j = 0;
-        for i in 0..4 {
-            digest[j    ] = ((self.state[i]      ) & 0xff) as u8;
-            digest[j + 1] = ((self.state[i] >>  8) & 0xff) as u8;
-            digest[j + 2] = ((self.state[i] >> 16) & 0xff) as u8;
-            digest[j + 3] = ((self.state[i] >> 24) & 0xff) as u8;
-            j += 4;
-        }
-        Digest(digest)
+        Digest(convert_u32_to_u8!(4, self.state))
     }
 }
 
@@ -200,7 +210,6 @@ fn consume(
     }: &mut Context,
     data: &[u8],
 ) {
-    let mut input = [0u32; 16];
     let mut k = ((count[0] >> 3) & 0x3f) as usize;
     let length = data.len() as u32;
     count[0] = count[0].wrapping_add(length << 3);
@@ -208,21 +217,20 @@ fn consume(
         count[1] = count[1].wrapping_add(1);
     }
     count[1] = count[1].wrapping_add(length >> 29);
-    for &value in data {
-        buffer[k] = value;
-        k += 1;
-        if k == 0x40 {
-            let mut j = 0;
-            for i in 0..16 {
-                input[i] = ((buffer[j + 3] as u32) << 24) |
-                           ((buffer[j + 2] as u32) << 16) |
-                           ((buffer[j + 1] as u32) <<  8) |
-                           ((buffer[j    ] as u32)      );
-                j += 4;
-            }
-            transform(state, &input);
-            k = 0;
+    let mut done = 0;
+    let mut left = data.len();
+    while left > 0 {
+        let count = if k + left <= 64 { left } else { 64 - k };
+        copy_u8!(&data[done], &mut buffer[k], count);
+        k = (k + count) % 64;
+        if k > 0 { break }
+        done += count;
+        left -= count;
+        let buffer = convert_u8_to_u32!(ref mut 64, buffer);
+        for value in buffer.iter_mut() {
+            *value = u32::from_le(*value);
         }
+        transform(state, &buffer);
     }
 }
 
