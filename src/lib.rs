@@ -79,7 +79,7 @@ macro_rules! implement {
         impl fmt::$kind for Digest {
             fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 for value in &self.0 {
-                    try!(write!(formatter, $format, value));
+                    write!(formatter, $format, value)?;
                 }
                 Ok(())
             }
