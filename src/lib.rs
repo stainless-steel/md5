@@ -105,7 +105,7 @@ const SHIFTS: [u32; 64] = [
 ];
 
 // f64::floor(power * f64::abs(f64::sin(i as f64 + 1.0))) as u32
-const SIN_CONSTS: [u32; 64] = [
+const SINES: [u32; 64] = [
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
     0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be, 0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
     0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa, 0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
@@ -189,7 +189,7 @@ fn transform(hash_values: &mut [u32; 4], buffer: &[u8; 64]) {
         |a: &mut u32, b: &mut u32, c: &mut u32, d: &mut u32, mut f: u32, g: usize, i: usize| {
             f = f
                 .wrapping_add(*a)
-                .wrapping_add(SIN_CONSTS[i])
+                .wrapping_add(SINES[i])
                 .wrapping_add(segments[g]);
             *a = *d;
             *d = *c;
