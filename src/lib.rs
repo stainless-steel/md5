@@ -91,9 +91,9 @@ implement!(LowerHex, "{:02x}");
 implement!(UpperHex, "{:02X}");
 
 const PADDING: [u8; 64] = {
-    let mut padding = [0; 64];
-    padding[0] = 0x80;
-    padding
+    let mut data = [0; 64];
+    data[0] = 0x80;
+    data
 };
 
 #[rustfmt::skip]
