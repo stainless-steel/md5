@@ -37,6 +37,11 @@ use core::convert;
 use core::fmt;
 use core::ops;
 
+#[cfg(feature = "std")]
+use core::io;
+
+/// A digest.
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Digest(pub [u8; 16]);
 
 impl convert::From<Digest> for [u8; 16] {
