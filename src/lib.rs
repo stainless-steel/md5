@@ -118,6 +118,7 @@ const SINES: [u32; 64] = [
 
 const START_HASH_VALUES: [u32; 4] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
 
+/// Consume data.
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut buffer: [u8; 64] = [0; 64];
     let mut hash_values = START_HASH_VALUES;
