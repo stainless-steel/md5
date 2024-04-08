@@ -90,7 +90,6 @@ macro_rules! implement {
 implement!(LowerHex, "{:02x}");
 implement!(UpperHex, "{:02X}");
 
-// Constants
 const PADDING: [u8; 64] = {
     let mut padding = [0; 64];
     padding[0] = 0x80;
