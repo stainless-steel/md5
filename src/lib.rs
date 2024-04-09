@@ -133,6 +133,7 @@ impl Context {
 
     /// Finalize and return the digest.
     #[rustfmt::skip]
+    #[allow(clippy::double_parens, clippy::needless_range_loop)]
     pub fn compute(mut self) -> Digest {
         let mut input = [0u32; 16];
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
@@ -161,6 +162,13 @@ impl Context {
             j += 4;
         }
         Digest(digest)
+    }
+}
+
+impl Default for Context {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -194,6 +202,7 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
 }
 
 #[rustfmt::skip]
+#[allow(clippy::double_parens, clippy::needless_range_loop)]
 fn consume(
     Context {
         buffer,
