@@ -40,6 +40,33 @@ use core::ops;
 #[cfg(feature = "std")]
 use core::io;
 
+fn main() {
+    let inputs = [
+        "",
+        "a",
+        "abc",
+        "message digest",
+        "abcdefghijklmnopqrstuvwxyz",
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+        "0123456789012345678901234567890123456789012345678901234567890123",
+        "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+    ];
+    let outputs = [
+        "d41d8cd98f00b204e9800998ecf8427e",
+        "0cc175b9c0f1b6a831c399e269772661",
+        "900150983cd24fb0d6963f7d28e17f72",
+        "f96b697d7cb7938d525a2f31aaf161d0",
+        "c3fcd3d76192e4007dfb496cca67e13b",
+        "d174ab98d277d9f5a5611c2c9f419d9f",
+        "7f7bfd348709deeaace19e3f535f8c54",
+        "57edf4a22be3c955ac49da2e2107b67a",
+    ];
+    for (input, &output) in inputs.iter().zip(outputs.iter()) {
+        let computed_value = format!("{:x}", compute(input));
+        assert_eq!(computed_value, output);
+    }
+}
+
 /// A digest.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Digest(pub [u8; 16]);
@@ -90,6 +117,14 @@ macro_rules! implement {
 implement!(LowerHex, "{:02x}");
 implement!(UpperHex, "{:02X}");
 
+/// A context.
+#[derive(Clone)]
+pub struct Context {
+    buffer: [u8; 64],
+    count: [u32; 2],
+    state: [u32; 4],
+}
+
 const PADDING: [u8; 64] = {
     let mut data = [0; 64];
     data[0] = 0x80;
@@ -118,56 +153,141 @@ const SINES: [u32; 64] = [
 
 const START_HASH_VALUES: [u32; 4] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
 
-/// Consume data.
-pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
-    let mut buffer: [u8; 64] = [0; 64];
-    let mut hash_values = START_HASH_VALUES;
-    let mut k = 0;
-
-    for &value in data.as_ref() {
-        buffer[k] = value;
-        k += 1;
-
-        if k == 64 {
-            transform(&mut hash_values, &buffer);
-            k = 0;
+impl Context {
+    /// Create a context for computing a digest.
+    #[inline]
+    pub fn new() -> Context {
+        Context {
+            buffer: [0; 64],
+            count: [0, 0],
+            state: START_HASH_VALUES,
         }
     }
 
-    if k > 55 {
+    /// Consume data.
+    #[cfg(target_pointer_width = "32")]
+    #[inline]
+    pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
+        consume_data(self, data.as_ref());
+    }
+
+    /// Consume data.
+    #[cfg(target_pointer_width = "64")]
+    pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
+        for chunk in data.as_ref().chunks(core::u32::MAX as usize) {
+            consume_data(self, chunk);
+        }
+    }
+
+    /// Finalize and return the digest.
+    pub fn compute(mut self) -> Digest {
+        consume_final_bits(&mut self);
+
+        println!("inside compute");
+        print_state(&self.state);
+
+        let mut output: [u8; 16] = [0; 16];
+        // Convert hash_values from u32 -> u8s assuming little endian format.
+        for i in 0..16 {
+            output[i] = self.state[i / 4] as u8;
+            self.state[i / 4] >>= 8;
+        }
+
+        Digest(output)
+    }
+}
+
+impl convert::From<Context> for Digest {
+    #[inline]
+    fn from(context: Context) -> Digest {
+        context.compute()
+    }
+}
+
+#[cfg(feature = "std")]
+impl io::Write for Context {
+    #[inline]
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+        self.consume(data);
+        Ok(data.len())
+    }
+
+    #[inline]
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Compute the digest of data.
+#[inline]
+pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
+    let mut context = Context::new();
+    context.consume(data);
+    context.compute()
+}
+
+fn consume_data(
+    Context {
+        buffer,
+        count,
+        mut state,
+    }: &mut Context,
+    data: &[u8],
+) {
+    let mut cursor = count[0] % 64;
+
+    for chunk in data {
+        buffer[cursor as usize] = *chunk;
+        cursor += 1;
+
+        if cursor == 64 {
+            transform(&mut state, &buffer);
+            cursor = 0;
+        }
+    }
+
+    let current_count = count[0] as u64 | ((count[1] as u64) << 32);
+    let additional_count = data.len() as u64;
+    let new_count = current_count.wrapping_add(additional_count);
+
+    count[0] = new_count as u32;
+    count[1] = (new_count >> 32) as u32;
+}
+
+fn consume_final_bits(
+    Context {
+        buffer,
+        count,
+        mut state,
+    }: &mut Context,
+) {
+    let cursor = (count[0] % 64) as usize;
+
+    if cursor > 55 {
         // Not enough space to fit length at the end of the buffer; pad and transform.
-        buffer[k..64].copy_from_slice(&PADDING[..64 - k]);
-        transform(&mut hash_values, &buffer);
+        buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
+        transform(&mut state, &buffer);
         // Copy across zeros upto the length marker.
-        buffer[..56].copy_from_slice(&PADDING[1..57])
+        buffer[0..56].copy_from_slice(&PADDING[1..57])
     } else {
         // Enough space already; copy across padding.
-        buffer[k..56].copy_from_slice(&PADDING[..56 - k])
+        buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
     }
 
     // Append the data length (in bits) and run the last transform.
-    let mut data_length = (data.as_ref().len() << 3) as u64;
-    let mut i = 0;
-    while i < 8 {
-        buffer[56 + i] = data_length as u8;
+    let mut data_length = (count[0] as u64 | ((count[1] as u64) << 32)) << 3;
+    for i in 56..64 {
+        buffer[i] = data_length as u8;
         data_length >>= 8;
-        i += 1;
     }
 
-    transform(&mut hash_values, &buffer);
-
-    let mut output: [u8; 16] = [0; 16];
-    // Convert hash_values from u32 -> u8s assuming little endian format.
-    for i in 0..16 {
-        output[i] = hash_values[i / 4] as u8;
-        hash_values[i / 4] >>= 8;
-    }
-
-    Digest(output)
+    transform(&mut state, &buffer);
+    println!("consume_final_bits");
+    print_state(&state);
 }
 
 #[inline(always)]
-fn transform(hash_values: &mut [u32; 4], buffer: &[u8; 64]) {
+fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     let mut segments: [u32; 16] = [0; 16];
 
     for i in 0..16 {
@@ -178,10 +298,10 @@ fn transform(hash_values: &mut [u32; 4], buffer: &[u8; 64]) {
             + ((buffer[byte_start + 3] as u32) << 24);
     }
 
-    let mut hash_a = hash_values[0];
-    let mut hash_b = hash_values[1];
-    let mut hash_c = hash_values[2];
-    let mut hash_d = hash_values[3];
+    let mut hash_a = state[0];
+    let mut hash_b = state[1];
+    let mut hash_c = state[2];
+    let mut hash_d = state[3];
 
     let mut f: u32;
     let mut g: usize;
@@ -222,10 +342,21 @@ fn transform(hash_values: &mut [u32; 4], buffer: &[u8; 64]) {
         cycle_hashes(&mut hash_a, &mut hash_b, &mut hash_c, &mut hash_d, f, g, i);
     }
 
-    hash_values[0] = hash_values[0].wrapping_add(hash_a);
-    hash_values[1] = hash_values[1].wrapping_add(hash_b);
-    hash_values[2] = hash_values[2].wrapping_add(hash_c);
-    hash_values[3] = hash_values[3].wrapping_add(hash_d);
+    state[0] = state[0].wrapping_add(hash_a);
+    state[1] = state[1].wrapping_add(hash_b);
+    state[2] = state[2].wrapping_add(hash_c);
+    state[3] = state[3].wrapping_add(hash_d);
+}
+
+fn print_state(state: &[u32; 4]) {
+    let mut bytes: [u8; 16] = [0; 16];
+
+    for i in 0..16 {
+        let lebytes = state[i / 4].to_le_bytes();
+        bytes[i] = lebytes[i % 4];
+    }
+
+    println!("{:02x?}", bytes);
 }
 
 #[cfg(test)]
@@ -263,5 +394,33 @@ mod tests {
         assert_eq!(digest[0], 0x90);
         assert_eq!(&digest[0], &0x90);
         assert_eq!(&mut digest[0], &mut 0x90);
+    }
+
+    #[test]
+    fn overflow_count() {
+        use std::io::prelude::Write;
+        let data = vec![0; 8 * 1024 * 1024];
+        let mut context = ::Context::new();
+        for _ in 0..64 {
+            context.write(&data).unwrap();
+        }
+        assert_eq!(
+            format!("{:x}", context.compute()),
+            "aa559b4e3523a6c931f08f4df52d58f2"
+        );
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn overflow_length() {
+        use std::io::prelude::Write;
+        use std::u32::MAX;
+        let data = vec![0; MAX as usize + 1];
+        let mut context = ::Context::new();
+        context.write(&data).unwrap();
+        assert_eq!(
+            format!("{:x}", context.compute()),
+            "c9a5a6878d97b48cc965c1e41859f034"
+        );
     }
 }
