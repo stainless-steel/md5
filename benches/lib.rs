@@ -1,4 +1,5 @@
 #![feature(test)]
+#![rustfmt::skip]
 
 extern crate md5;
 extern crate test;

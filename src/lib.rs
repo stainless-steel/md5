@@ -132,6 +132,7 @@ impl Context {
     }
 
     /// Finalize and return the digest.
+    #[rustfmt::skip]
     pub fn compute(mut self) -> Digest {
         let mut input = [0u32; 16];
         let k = ((self.count[0] >> 3) & 0x3f) as usize;
@@ -192,6 +193,7 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     context.compute()
 }
 
+#[rustfmt::skip]
 fn consume(
     Context {
         buffer,
@@ -226,6 +228,7 @@ fn consume(
     }
 }
 
+#[rustfmt::skip]
 fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
     let (mut a, mut b, mut c, mut d) = (state[0], state[1], state[2], state[3]);
     macro_rules! add(
