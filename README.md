@@ -26,15 +26,14 @@ Your contribution is highly appreciated. Do not hesitate to open an issue or a
 pull request. Note that any contribution submitted for inclusion in the project
 will be licensed according to the terms given in [LICENSE.md](LICENSE.md).
 
-[build-img]: https://travis-ci.org/stainless-steel/md5.svg?branch=master
-[build-url]: https://travis-ci.org/stainless-steel/md5
+[ACM1724151]: https://dl.acm.org/citation.cfm?id=1724151
+[MD5]: https://en.wikipedia.org/wiki/MD5
+[RFC6151]: https://tools.ietf.org/html/rfc6151
+[VU836068]: https://www.kb.cert.org/vuls/id/836068
+
+[build-img]: https://github.com/stainless-steel/md5/workflows/build/badge.svg
+[build-url]: https://github.com/stainless-steel/md5/actions/workflows/build.yml
 [documentation-img]: https://docs.rs/md5/badge.svg
 [documentation-url]: https://docs.rs/md5
 [package-img]: https://img.shields.io/crates/v/md5.svg
 [package-url]: https://crates.io/crates/md5
-
-[MD5]: https://en.wikipedia.org/wiki/MD5
-
-[ACM1724151]: https://dl.acm.org/citation.cfm?id=1724151
-[RFC6151]: https://tools.ietf.org/html/rfc6151
-[VU836068]: https://www.kb.cert.org/vuls/id/836068
