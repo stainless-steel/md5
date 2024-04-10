@@ -167,6 +167,13 @@ impl Context {
     }
 }
 
+impl Default for Context {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl convert::From<Context> for Digest {
     #[inline]
     fn from(context: Context) -> Digest {
