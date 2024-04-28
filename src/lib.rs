@@ -198,9 +198,51 @@ impl io::Write for Context {
 /// Compute the digest of data.
 #[inline]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
-    let mut context = Context::new();
-    context.consume(data);
-    context.compute()
+    // Code is explicitly inlined for performance.
+    let mut buffer: [u8; 64] = [0; 64];
+    let mut hash_values = START_HASH_VALUES;
+    let mut k = 0;
+
+    for &value in data.as_ref() {
+        buffer[k] = value;
+        k += 1;
+
+        if k == 64 {
+            transform(&mut hash_values, &buffer);
+            k = 0;
+        }
+    }
+
+    if k > 55 {
+        // Not enough space to fit length at the end of the buffer; pad and transform.
+        buffer[k..64].copy_from_slice(&PADDING[..64 - k]);
+        transform(&mut hash_values, &buffer);
+        // Copy across zeros upto the length marker.
+        buffer[..56].copy_from_slice(&PADDING[1..57])
+    } else {
+        // Enough space already; copy across padding.
+        buffer[k..56].copy_from_slice(&PADDING[..56 - k])
+    }
+
+    // Append the data length (in bits) and run the last transform.
+    let mut data_length = (data.as_ref().len() << 3) as u64;
+    let mut i = 0;
+    while i < 8 {
+        buffer[56 + i] = data_length as u8;
+        data_length >>= 8;
+        i += 1;
+    }
+
+    transform(&mut hash_values, &buffer);
+
+    let mut output: [u8; 16] = [0; 16];
+    // Convert hash_values from u32 -> u8s assuming little endian format.
+    for i in 0..16 {
+        output[i] = hash_values[i / 4] as u8;
+        hash_values[i / 4] >>= 8;
+    }
+
+    Digest(output)
 }
 
 fn consume_data(
