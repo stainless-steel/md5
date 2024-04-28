@@ -246,7 +246,7 @@ fn finalize(
     output
 }
 
-#[allow(clippy::identity_op, clippy::needless_range_loop)]
+#[allow(clippy::double_parens, clippy::needless_range_loop)]
 #[inline(always)]
 #[rustfmt::skip]
 fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
@@ -255,7 +255,7 @@ fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     for i in 0..16 {
         let j = i * 4;
         segments[i] =
-              ((buffer[j + 0] as u32) <<  0)
+              ((buffer[j    ] as u32)      )
             + ((buffer[j + 1] as u32) <<  8)
             + ((buffer[j + 2] as u32) << 16)
             + ((buffer[j + 3] as u32) << 24);
