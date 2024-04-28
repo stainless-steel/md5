@@ -104,6 +104,7 @@ const PADDING: [u8; 64] = {
     data
 };
 
+#[allow(clippy::zero_prefixed_literal)]
 #[rustfmt::skip]
 const SHIFTS: [u32; 64] = [
     07, 12, 17, 22, 07, 12, 17, 22, 07, 12, 17, 22, 07, 12, 17, 22,
@@ -191,6 +192,7 @@ impl io::Write for Context {
 }
 
 /// Compute the digest of data.
+#[allow(clippy::needless_range_loop)]
 #[inline]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut buffer: [u8; 64] = [0; 64];
@@ -235,19 +237,20 @@ fn consume(buffer: &mut [u8; 64], count: &mut [u32; 2], state: &mut [u32; 4], da
         buffer[cursor as usize] = *chunk;
         cursor += 1;
         if cursor == 64 {
-            transform(state, &buffer);
+            transform(state, buffer);
             cursor = 0;
         }
     }
     increment(count, data.len() as u64);
 }
 
+#[allow(clippy::needless_range_loop)]
 #[inline(always)]
 fn finalize(buffer: &mut [u8; 64], count: &[u32; 2], state: &mut [u32; 4]) -> [u8; 16] {
     let cursor = (count[0] % 64) as usize;
     if cursor > 55 {
         buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
-        transform(state, &buffer);
+        transform(state, buffer);
         buffer[0..56].copy_from_slice(&PADDING[1..57])
     } else {
         buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
@@ -257,7 +260,7 @@ fn finalize(buffer: &mut [u8; 64], count: &[u32; 2], state: &mut [u32; 4]) -> [u
         buffer[i] = length as u8;
         length >>= 8;
     }
-    transform(state, &buffer);
+    transform(state, buffer);
 
     let mut output: [u8; 16] = [0; 16];
     for i in 0..16 {
@@ -275,8 +278,9 @@ fn increment(count: &mut [u32; 2], addition: u64) {
     count[1] = (length >> 32) as u32;
 }
 
-#[rustfmt::skip]
+#[allow(clippy::identity_op, clippy::needless_range_loop)]
 #[inline(always)]
+#[rustfmt::skip]
 fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     let mut segments: [u32; 16] = [0; 16];
 
