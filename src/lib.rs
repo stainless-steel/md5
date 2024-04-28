@@ -141,12 +141,7 @@ impl Context {
 
     /// Finalize and return the digest.
     pub fn finalize(mut self) -> Digest {
-        finalize(
-            &mut self.state,
-            &mut self.buffer,
-            self.cursor,
-            self.length,
-        )
+        finalize(&mut self.state, &mut self.buffer, self.cursor, self.length)
     }
 
     /// Finalize and return the digest.
@@ -220,12 +215,7 @@ fn consume(
 
 #[allow(clippy::needless_range_loop)]
 #[inline(always)]
-fn finalize(
-    state: &mut [u32; 4],
-    buffer: &mut [u8; 64],
-    cursor: usize,
-    mut length: u64,
-) -> Digest {
+fn finalize(state: &mut [u32; 4], buffer: &mut [u8; 64], cursor: usize, mut length: u64) -> Digest {
     if cursor > 55 {
         buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
         transform(state, buffer);
