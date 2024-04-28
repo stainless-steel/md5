@@ -368,7 +368,7 @@ mod tests {
         }
         assert_eq!(
             format!("{:x}", context.compute()),
-            "aa559b4e3523a6c931f08f4df52d58f2"
+            "aa559b4e3523a6c931f08f4df52d58f2",
         );
     }
 
@@ -382,7 +382,7 @@ mod tests {
         context.write(&data).unwrap();
         assert_eq!(
             format!("{:x}", context.compute()),
-            "c9a5a6878d97b48cc965c1e41859f034"
+            "c9a5a6878d97b48cc965c1e41859f034",
         );
     }
 }
