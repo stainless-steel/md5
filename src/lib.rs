@@ -132,13 +132,18 @@ impl Context {
     /// Consume data.
     #[inline]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        consume(self, data.as_ref());
+        consume(
+            &mut self.buffer,
+            &mut self.count,
+            &mut self.state,
+            data.as_ref(),
+        );
     }
 
     /// Finalize and return the digest.
     #[inline]
     pub fn finalize(mut self) -> Digest {
-        Digest(finalize(&mut self))
+        Digest(finalize(&mut self.buffer, &self.count, &mut self.state))
     }
 
     /// Finalize and return the digest.
@@ -182,37 +187,29 @@ impl core::io::Write for Context {
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut buffer: [u8; 64] = [0; 64];
     let mut state = STATE;
-    let mut k = 0;
+    let mut cursor = 0;
 
     for &value in data.as_ref() {
-        buffer[k] = value;
-        k += 1;
-        if k == 64 {
+        buffer[cursor] = value;
+        cursor += 1;
+        if cursor == 64 {
             transform(&mut state, &buffer);
-            k = 0;
+            cursor = 0;
         }
     }
 
-    if k > 55 {
-        // Not enough space to fit length at the end of the buffer; pad and transform.
-        buffer[k..64].copy_from_slice(&PADDING[..64 - k]);
+    if cursor > 55 {
+        buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
         transform(&mut state, &buffer);
-        // Copy across zeros upto the length marker.
         buffer[..56].copy_from_slice(&PADDING[1..57])
     } else {
-        // Enough space already; copy across padding.
-        buffer[k..56].copy_from_slice(&PADDING[..56 - k])
+        buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
     }
-
-    // Append the data length (in bits) and run the last transform.
-    let mut data_length = (data.as_ref().len() << 3) as u64;
-    let mut i = 0;
-    while i < 8 {
-        buffer[56 + i] = data_length as u8;
-        data_length >>= 8;
-        i += 1;
+    let mut length = (data.as_ref().len() << 3) as u64;
+    for i in 56..64 {
+        buffer[i] = length as u8;
+        length >>= 8;
     }
-
     transform(&mut state, &buffer);
 
     let mut output: [u8; 16] = [0; 16];
@@ -220,18 +217,10 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
         output[i] = state[i / 4] as u8;
         state[i / 4] >>= 8;
     }
-
     Digest(output)
 }
 
-fn consume(
-    Context {
-        buffer,
-        count,
-        state,
-    }: &mut Context,
-    data: &[u8],
-) {
+fn consume(buffer: &mut [u8; 64], count: &mut [u32; 2], state: &mut [u32; 4], data: &[u8]) {
     let mut cursor = count[0] % 64;
 
     for chunk in data {
@@ -244,41 +233,26 @@ fn consume(
         }
     }
 
-    let current_count = count[0] as u64 | ((count[1] as u64) << 32);
-    let additional_count = data.len() as u64;
-    let new_count = current_count.wrapping_add(additional_count);
-
-    count[0] = new_count as u32;
-    count[1] = (new_count >> 32) as u32;
+    let length = count[0] as u64 | ((count[1] as u64) << 32);
+    let length = length.wrapping_add(data.len() as u64);
+    count[0] = length as u32;
+    count[1] = (length >> 32) as u32;
 }
 
-fn finalize(
-    Context {
-        buffer,
-        count,
-        state,
-    }: &mut Context,
-) -> [u8; 16] {
+fn finalize(buffer: &mut [u8; 64], count: &[u32; 2], state: &mut [u32; 4]) -> [u8; 16] {
     let cursor = (count[0] % 64) as usize;
-
     if cursor > 55 {
-        // Not enough space to fit length at the end of the buffer; pad and transform.
         buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
         transform(state, &buffer);
-        // Copy across zeros upto the length marker.
         buffer[0..56].copy_from_slice(&PADDING[1..57])
     } else {
-        // Enough space already; copy across padding.
         buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
     }
-
-    // Append the data length (in bits) and run the last transform.
-    let mut data_length = (count[0] as u64 | ((count[1] as u64) << 32)) << 3;
+    let mut length = (count[0] as u64 | ((count[1] as u64) << 32)) << 3;
     for i in 56..64 {
-        buffer[i] = data_length as u8;
-        data_length >>= 8;
+        buffer[i] = length as u8;
+        length >>= 8;
     }
-
     transform(state, &buffer);
 
     let mut output: [u8; 16] = [0; 16];
@@ -286,7 +260,6 @@ fn finalize(
         output[i] = state[i / 4] as u8;
         state[i / 4] >>= 8;
     }
-
     output
 }
 
