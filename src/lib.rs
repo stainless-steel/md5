@@ -129,7 +129,6 @@ impl Context {
     }
 
     /// Consume data.
-    #[cfg(target_pointer_width = "32")]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         consume(
             &mut self.state,
@@ -138,20 +137,6 @@ impl Context {
             &mut self.length,
             data.as_ref(),
         );
-    }
-
-    /// Consume data.
-    #[cfg(target_pointer_width = "64")]
-    pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        for chunk in data.as_ref().chunks(core::u32::MAX as usize) {
-            consume(
-                &mut self.state,
-                &mut self.buffer,
-                &mut self.cursor,
-                &mut self.length,
-                chunk,
-            );
-        }
     }
 
     /// Finalize and return the digest.
@@ -323,6 +308,8 @@ fn rotate(a: &mut u32, b: &mut u32, c: &mut u32, d: &mut u32, mut f: u32, g: u32
 
 #[cfg(test)]
 mod tests {
+    use std::io::prelude::Write;
+
     #[test]
     fn compute() {
         let inputs = [
@@ -359,8 +346,7 @@ mod tests {
     }
 
     #[test]
-    fn overflow_count() {
-        use std::io::prelude::Write;
+    fn write_29() {
         let data = vec![0; 8 * 1024 * 1024];
         let mut context = super::Context::new();
         for _ in 0..64 {
@@ -373,11 +359,8 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_pointer_width = "64")]
-    fn overflow_length() {
-        use std::io::prelude::Write;
-        use std::u32::MAX;
-        let data = vec![0; MAX as usize + 1];
+    fn write_32() {
+        let data = vec![0; std::u32::MAX as usize + 1];
         let mut context = super::Context::new();
         context.write(&data).unwrap();
         assert_eq!(
