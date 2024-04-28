@@ -189,9 +189,8 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
         mut cursor,
         mut length,
     } = Context::new();
-    let data = data.as_ref();
-    consume(&mut state, &mut buffer, &mut cursor, &mut length, data);
-    finalize(&mut state, &mut buffer, cursor, data.len() as u64)
+    consume(&mut state, &mut buffer, &mut cursor, &mut length, data.as_ref());
+    finalize(&mut state, &mut buffer, cursor, length)
 }
 
 #[inline(always)]
