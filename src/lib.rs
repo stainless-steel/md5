@@ -106,10 +106,10 @@ const PADDING: [u8; 64] = {
 
 #[rustfmt::skip]
 const SHIFTS: [u32; 64] = [
-    07, 12, 17, 22, 07, 12, 17, 22, 07, 12, 17, 22, 07, 12, 17, 22, // Round 1
-    05, 09, 14, 20, 05, 09, 14, 20, 05, 09, 14, 20, 05, 09, 14, 20, // Round 2
-    04, 11, 16, 23, 04, 11, 16, 23, 04, 11, 16, 23, 04, 11, 16, 23, // Round 3
-    06, 10, 15, 21, 06, 10, 15, 21, 06, 10, 15, 21, 06, 10, 15, 21, // Round 4
+    07, 12, 17, 22, 07, 12, 17, 22, 07, 12, 17, 22, 07, 12, 17, 22,
+    05, 09, 14, 20, 05, 09, 14, 20, 05, 09, 14, 20, 05, 09, 14, 20,
+    04, 11, 16, 23, 04, 11, 16, 23, 04, 11, 16, 23, 04, 11, 16, 23,
+    06, 10, 15, 21, 06, 10, 15, 21, 06, 10, 15, 21, 06, 10, 15, 21,
 ];
 
 // f64::floor(power * f64::abs(f64::sin(i as f64 + 1.0))) as u32
@@ -124,7 +124,7 @@ const SINES: [u32; 64] = [
     0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1, 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
 ];
 
-const START_HASH_VALUES: [u32; 4] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
+const STATE: [u32; 4] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
 
 impl Context {
     /// Create a context for computing a digest.
@@ -133,7 +133,7 @@ impl Context {
         Context {
             buffer: [0; 64],
             count: [0, 0],
-            state: START_HASH_VALUES,
+            state: STATE,
         }
     }
 
@@ -141,28 +141,25 @@ impl Context {
     #[cfg(target_pointer_width = "32")]
     #[inline]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        consume_data(self, data.as_ref());
+        consume(self, data.as_ref());
     }
 
     /// Consume data.
     #[cfg(target_pointer_width = "64")]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         for chunk in data.as_ref().chunks(core::u32::MAX as usize) {
-            consume_data(self, chunk);
+            consume(self, chunk);
         }
     }
 
     /// Finalize and return the digest.
     pub fn compute(mut self) -> Digest {
         consume_final_bits(&mut self);
-
         let mut output: [u8; 16] = [0; 16];
-        // Convert hash_values from u32 -> u8s assuming little endian format.
         for i in 0..16 {
             output[i] = self.state[i / 4] as u8;
             self.state[i / 4] >>= 8;
         }
-
         Digest(output)
     }
 }
@@ -198,17 +195,15 @@ impl io::Write for Context {
 /// Compute the digest of data.
 #[inline]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
-    // Code is explicitly inlined for performance.
     let mut buffer: [u8; 64] = [0; 64];
-    let mut hash_values = START_HASH_VALUES;
+    let mut state = STATE;
     let mut k = 0;
 
     for &value in data.as_ref() {
         buffer[k] = value;
         k += 1;
-
         if k == 64 {
-            transform(&mut hash_values, &buffer);
+            transform(&mut state, &buffer);
             k = 0;
         }
     }
@@ -216,7 +211,7 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     if k > 55 {
         // Not enough space to fit length at the end of the buffer; pad and transform.
         buffer[k..64].copy_from_slice(&PADDING[..64 - k]);
-        transform(&mut hash_values, &buffer);
+        transform(&mut state, &buffer);
         // Copy across zeros upto the length marker.
         buffer[..56].copy_from_slice(&PADDING[1..57])
     } else {
@@ -233,19 +228,18 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
         i += 1;
     }
 
-    transform(&mut hash_values, &buffer);
+    transform(&mut state, &buffer);
 
     let mut output: [u8; 16] = [0; 16];
-    // Convert hash_values from u32 -> u8s assuming little endian format.
     for i in 0..16 {
-        output[i] = hash_values[i / 4] as u8;
-        hash_values[i / 4] >>= 8;
+        output[i] = state[i / 4] as u8;
+        state[i / 4] >>= 8;
     }
 
     Digest(output)
 }
 
-fn consume_data(
+fn consume(
     Context {
         buffer,
         count,
