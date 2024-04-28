@@ -130,7 +130,6 @@ impl Context {
     }
 
     /// Consume data.
-    #[inline]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         consume(
             &mut self.buffer,
@@ -220,25 +219,21 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     Digest(output)
 }
 
+#[inline(always)]
 fn consume(buffer: &mut [u8; 64], count: &mut [u32; 2], state: &mut [u32; 4], data: &[u8]) {
     let mut cursor = count[0] % 64;
-
     for chunk in data {
         buffer[cursor as usize] = *chunk;
         cursor += 1;
-
         if cursor == 64 {
             transform(state, &buffer);
             cursor = 0;
         }
     }
-
-    let length = count[0] as u64 | ((count[1] as u64) << 32);
-    let length = length.wrapping_add(data.len() as u64);
-    count[0] = length as u32;
-    count[1] = (length >> 32) as u32;
+    increment(count, data.len() as u64);
 }
 
+#[inline(always)]
 fn finalize(buffer: &mut [u8; 64], count: &[u32; 2], state: &mut [u32; 4]) -> [u8; 16] {
     let cursor = (count[0] % 64) as usize;
     if cursor > 55 {
@@ -261,6 +256,14 @@ fn finalize(buffer: &mut [u8; 64], count: &[u32; 2], state: &mut [u32; 4]) -> [u
         state[i / 4] >>= 8;
     }
     output
+}
+
+#[inline(always)]
+fn increment(count: &mut [u32; 2], addition: u64) {
+    let length = count[0] as u64 | ((count[1] as u64) << 32);
+    let length = length.wrapping_add(addition);
+    count[0] = length as u32;
+    count[1] = (length >> 32) as u32;
 }
 
 #[rustfmt::skip]
