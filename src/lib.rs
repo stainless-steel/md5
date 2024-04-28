@@ -287,66 +287,62 @@ fn consume_final_bits(
     transform(state, &buffer);
 }
 
+#[rustfmt::skip]
 #[inline(always)]
 fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     let mut segments: [u32; 16] = [0; 16];
 
     for i in 0..16 {
-        let byte_start = i * 4;
-        segments[i] = ((buffer[byte_start] as u32) << 0)
-            + ((buffer[byte_start + 1] as u32) << 8)
-            + ((buffer[byte_start + 2] as u32) << 16)
-            + ((buffer[byte_start + 3] as u32) << 24);
+        let j = i * 4;
+        segments[i] =
+              ((buffer[j + 0] as u32) <<  0)
+            + ((buffer[j + 1] as u32) <<  8)
+            + ((buffer[j + 2] as u32) << 16)
+            + ((buffer[j + 3] as u32) << 24);
     }
 
-    let mut hash_a = state[0];
-    let mut hash_b = state[1];
-    let mut hash_c = state[2];
-    let mut hash_d = state[3];
-
-    let mut f: u32;
-    let mut g: usize;
-
-    let cycle_hashes =
-        |a: &mut u32, b: &mut u32, c: &mut u32, d: &mut u32, mut f: u32, g: usize, i: usize| {
-            f = f
-                .wrapping_add(*a)
-                .wrapping_add(SINES[i])
-                .wrapping_add(segments[g]);
-            *a = *d;
-            *d = *c;
-            *c = *b;
-            *b = f.rotate_left(SHIFTS[i]).wrapping_add(*b);
-        };
+    let mut a = state[0];
+    let mut b = state[1];
+    let mut c = state[2];
+    let mut d = state[3];
 
     for i in 0..16 {
-        f = (hash_b & hash_c) | (!hash_b & hash_d);
-        g = i;
-        cycle_hashes(&mut hash_a, &mut hash_b, &mut hash_c, &mut hash_d, f, g, i);
+        let f = (b & c) | (!b & d);
+        let g = i;
+        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
     for i in 16..32 {
-        f = (hash_d & hash_b) | (!hash_d & hash_c);
-        g = (5 * i + 1) % 16;
-        cycle_hashes(&mut hash_a, &mut hash_b, &mut hash_c, &mut hash_d, f, g, i);
+        let f = (d & b) | (!d & c);
+        let g = (5 * i + 1) % 16;
+        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
     for i in 32..48 {
-        f = hash_b ^ hash_c ^ hash_d;
-        g = (3 * i + 5) % 16;
-        cycle_hashes(&mut hash_a, &mut hash_b, &mut hash_c, &mut hash_d, f, g, i);
+        let f = b ^ c ^ d;
+        let g = (3 * i + 5) % 16;
+        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
     for i in 48..64 {
-        f = hash_c ^ (hash_b | !hash_d);
-        g = (7 * i) % 16;
-        cycle_hashes(&mut hash_a, &mut hash_b, &mut hash_c, &mut hash_d, f, g, i);
+        let f = c ^ (b | !d);
+        let g = (7 * i) % 16;
+        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
-    state[0] = state[0].wrapping_add(hash_a);
-    state[1] = state[1].wrapping_add(hash_b);
-    state[2] = state[2].wrapping_add(hash_c);
-    state[3] = state[3].wrapping_add(hash_d);
+    state[0] = state[0].wrapping_add(a);
+    state[1] = state[1].wrapping_add(b);
+    state[2] = state[2].wrapping_add(c);
+    state[3] = state[3].wrapping_add(d);
+}
+
+#[inline(always)]
+fn cycle(a: &mut u32, b: &mut u32, c: &mut u32, d: &mut u32, mut f: u32, g: u32, i: usize) {
+    f = f.wrapping_add(*a).wrapping_add(SINES[i]).wrapping_add(g);
+    *a = *d;
+    *d = *c;
+    *c = *b;
+    *b = f.rotate_left(SHIFTS[i]).wrapping_add(*b);
 }
 
 #[cfg(test)]
