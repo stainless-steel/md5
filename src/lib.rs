@@ -24,9 +24,6 @@
 //! [RFC6151]: https://tools.ietf.org/html/rfc6151
 //! [VU836068]: https://www.kb.cert.org/vuls/id/836068
 
-// The implementation is based on:
-// https://www.ietf.org/rfc/rfc1321.txt
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
