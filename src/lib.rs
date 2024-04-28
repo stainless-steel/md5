@@ -252,16 +252,18 @@ fn finalize(
 #[inline(always)]
 #[rustfmt::skip]
 fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
-    let mut segments: [u32; 16] = [0; 16];
-
-    for i in 0..16 {
-        let j = i * 4;
-        segments[i] =
-              ((buffer[j    ] as u32)      )
-            + ((buffer[j + 1] as u32) <<  8)
-            + ((buffer[j + 2] as u32) << 16)
-            + ((buffer[j + 3] as u32) << 24);
-    }
+    let buffer = {
+        let mut value: [u32; 16] = [0; 16];
+        for i in 0..16 {
+            let j = i * 4;
+            value[i] =
+                  ((buffer[j    ] as u32)      )
+                + ((buffer[j + 1] as u32) <<  8)
+                + ((buffer[j + 2] as u32) << 16)
+                + ((buffer[j + 3] as u32) << 24);
+        }
+        value
+    };
 
     let mut a = state[0];
     let mut b = state[1];
@@ -271,25 +273,25 @@ fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     for i in 0..16 {
         let f = (b & c) | (!b & d);
         let g = i;
-        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, buffer[g], i);
     }
 
     for i in 16..32 {
         let f = (d & b) | (!d & c);
         let g = (5 * i + 1) % 16;
-        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, buffer[g], i);
     }
 
     for i in 32..48 {
         let f = b ^ c ^ d;
         let g = (3 * i + 5) % 16;
-        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, buffer[g], i);
     }
 
     for i in 48..64 {
         let f = c ^ (b | !d);
         let g = (7 * i) % 16;
-        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, buffer[g], i);
     }
 
     state[0] = state[0].wrapping_add(a);
