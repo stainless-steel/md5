@@ -153,14 +153,9 @@ impl Context {
     }
 
     /// Finalize and return the digest.
+    #[inline]
     pub fn compute(mut self) -> Digest {
-        consume_final_bits(&mut self);
-        let mut output: [u8; 16] = [0; 16];
-        for i in 0..16 {
-            output[i] = self.state[i / 4] as u8;
-            self.state[i / 4] >>= 8;
-        }
-        Digest(output)
+        Digest(finalize(&mut self))
     }
 }
 
@@ -267,13 +262,13 @@ fn consume(
     count[1] = (new_count >> 32) as u32;
 }
 
-fn consume_final_bits(
+fn finalize(
     Context {
         buffer,
         count,
         state,
     }: &mut Context,
-) {
+) -> [u8; 16] {
     let cursor = (count[0] % 64) as usize;
 
     if cursor > 55 {
@@ -295,6 +290,14 @@ fn consume_final_bits(
     }
 
     transform(state, &buffer);
+
+    let mut output: [u8; 16] = [0; 16];
+    for i in 0..16 {
+        output[i] = state[i / 4] as u8;
+        state[i / 4] >>= 8;
+    }
+
+    output
 }
 
 #[rustfmt::skip]
