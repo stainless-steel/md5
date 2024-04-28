@@ -285,25 +285,25 @@ fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     for i in 0..16 {
         let f = (b & c) | (!b & d);
         let g = i;
-        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
     for i in 16..32 {
         let f = (d & b) | (!d & c);
         let g = (5 * i + 1) % 16;
-        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
     for i in 32..48 {
         let f = b ^ c ^ d;
         let g = (3 * i + 5) % 16;
-        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
     for i in 48..64 {
         let f = c ^ (b | !d);
         let g = (7 * i) % 16;
-        cycle(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
+        rotate(&mut a, &mut b, &mut c, &mut d, f, segments[g], i);
     }
 
     state[0] = state[0].wrapping_add(a);
@@ -313,7 +313,7 @@ fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
 }
 
 #[inline(always)]
-fn cycle(a: &mut u32, b: &mut u32, c: &mut u32, d: &mut u32, mut f: u32, g: u32, i: usize) {
+fn rotate(a: &mut u32, b: &mut u32, c: &mut u32, d: &mut u32, mut f: u32, g: u32, i: usize) {
     f = f.wrapping_add(*a).wrapping_add(SINES[i]).wrapping_add(g);
     *a = *d;
     *d = *c;
