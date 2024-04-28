@@ -142,8 +142,15 @@ impl Context {
 
     /// Finalize and return the digest.
     #[inline]
-    pub fn finalize(mut self) -> Digest {
-        Digest(finalize(&mut self.buffer, &self.count, &mut self.state))
+    pub fn finalize(self) -> Digest {
+        let Context {
+            mut buffer,
+            count,
+            mut state,
+        } = self;
+        let cursor = (count[0] % 64) as usize;
+        let length = (count[0] as u64 | ((count[1] as u64) << 32)) << 3;
+        Digest(finalize(&mut buffer, &mut state, cursor, length))
     }
 
     /// Finalize and return the digest.
@@ -190,7 +197,8 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut state = STATE;
     let mut cursor = 0;
 
-    for &value in data.as_ref() {
+    let data = data.as_ref();
+    for &value in data {
         buffer[cursor] = value;
         cursor += 1;
         if cursor == 64 {
@@ -199,26 +207,12 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
         }
     }
 
-    if cursor > 55 {
-        buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
-        transform(&mut state, &buffer);
-        buffer[..56].copy_from_slice(&PADDING[1..57])
-    } else {
-        buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
-    }
-    let mut length = (data.as_ref().len() << 3) as u64;
-    for i in 56..64 {
-        buffer[i] = length as u8;
-        length >>= 8;
-    }
-    transform(&mut state, &buffer);
-
-    let mut output: [u8; 16] = [0; 16];
-    for i in 0..16 {
-        output[i] = state[i / 4] as u8;
-        state[i / 4] >>= 8;
-    }
-    Digest(output)
+    Digest(finalize(
+        &mut buffer,
+        &mut state,
+        cursor,
+        (data.len() << 3) as u64,
+    ))
 }
 
 #[inline(always)]
@@ -237,8 +231,12 @@ fn consume(buffer: &mut [u8; 64], count: &mut [u32; 2], state: &mut [u32; 4], da
 
 #[allow(clippy::needless_range_loop)]
 #[inline(always)]
-fn finalize(buffer: &mut [u8; 64], count: &[u32; 2], state: &mut [u32; 4]) -> [u8; 16] {
-    let cursor = (count[0] % 64) as usize;
+fn finalize(
+    buffer: &mut [u8; 64],
+    state: &mut [u32; 4],
+    cursor: usize,
+    mut length: u64,
+) -> [u8; 16] {
     if cursor > 55 {
         buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
         transform(state, buffer);
@@ -246,7 +244,6 @@ fn finalize(buffer: &mut [u8; 64], count: &[u32; 2], state: &mut [u32; 4]) -> [u
     } else {
         buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
     }
-    let mut length = (count[0] as u64 | ((count[1] as u64) << 32)) << 3;
     for i in 56..64 {
         buffer[i] = length as u8;
         length >>= 8;
