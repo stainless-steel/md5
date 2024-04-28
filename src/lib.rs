@@ -192,7 +192,6 @@ impl core::io::Write for Context {
 
 /// Compute the digest of data.
 #[allow(clippy::needless_range_loop)]
-#[inline]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut buffer: [u8; 64] = [0; 64];
     let mut state = STATE;
