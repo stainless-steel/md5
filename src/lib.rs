@@ -33,77 +33,7 @@
 #[cfg(feature = "std")]
 use std as core;
 
-use core::convert;
-use core::fmt;
-use core::ops;
-
-#[cfg(feature = "std")]
-use core::io;
-
-/// A digest.
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
-pub struct Digest(pub [u8; 16]);
-
-impl convert::From<Digest> for [u8; 16] {
-    #[inline]
-    fn from(digest: Digest) -> Self {
-        digest.0
-    }
-}
-
-impl fmt::Debug for Digest {
-    #[inline]
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        fmt::LowerHex::fmt(self, formatter)
-    }
-}
-
-impl ops::Deref for Digest {
-    type Target = [u8; 16];
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl ops::DerefMut for Digest {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-macro_rules! implement {
-    ($kind:ident, $format:expr) => {
-        impl fmt::$kind for Digest {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                for value in &self.0 {
-                    write!(formatter, $format, value)?;
-                }
-                Ok(())
-            }
-        }
-    };
-}
-
-implement!(LowerHex, "{:02x}");
-implement!(UpperHex, "{:02X}");
-
-/// A context.
-#[derive(Clone)]
-pub struct Context {
-    state: [u32; 4],
-    buffer: [u8; 64],
-    cursor: usize,
-    length: u64,
-}
-
-const PADDING: [u8; 64] = {
-    let mut data = [0; 64];
-    data[0] = 0x80;
-    data
-};
+const STATE: [u32; 4] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
 
 #[allow(clippy::zero_prefixed_literal)]
 #[rustfmt::skip]
@@ -114,7 +44,6 @@ const SHIFTS: [u32; 64] = [
     06, 10, 15, 21, 06, 10, 15, 21, 06, 10, 15, 21, 06, 10, 15, 21,
 ];
 
-// f64::floor(power * f64::abs(f64::sin(i as f64 + 1.0))) as u32
 const SINES: [u32; 64] = [
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
     0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be, 0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
@@ -126,7 +55,70 @@ const SINES: [u32; 64] = [
     0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1, 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
 ];
 
-const STATE: [u32; 4] = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
+const PADDING: [u8; 64] = {
+    let mut data = [0; 64];
+    data[0] = 0x80;
+    data
+};
+
+/// A digest.
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+pub struct Digest(pub [u8; 16]);
+
+/// A context.
+#[derive(Clone)]
+pub struct Context {
+    state: [u32; 4],
+    buffer: [u8; 64],
+    cursor: usize,
+    length: u64,
+}
+
+impl core::convert::From<Digest> for [u8; 16] {
+    #[inline]
+    fn from(digest: Digest) -> Self {
+        digest.0
+    }
+}
+
+impl core::fmt::Debug for Digest {
+    #[inline]
+    fn fmt(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(self, formatter)
+    }
+}
+
+impl core::ops::Deref for Digest {
+    type Target = [u8; 16];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl core::ops::DerefMut for Digest {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+macro_rules! implement {
+    ($kind:ident, $format:expr) => {
+        impl core::fmt::$kind for Digest {
+            fn fmt(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                for value in &self.0 {
+                    write!(formatter, $format, value)?;
+                }
+                Ok(())
+            }
+        }
+    };
+}
+
+implement!(LowerHex, "{:02x}");
+implement!(UpperHex, "{:02X}");
 
 impl Context {
     /// Create a context for computing a digest.
@@ -184,7 +176,7 @@ impl Default for Context {
     }
 }
 
-impl convert::From<Context> for Digest {
+impl core::convert::From<Context> for Digest {
     #[inline]
     fn from(context: Context) -> Digest {
         context.compute()
@@ -192,15 +184,15 @@ impl convert::From<Context> for Digest {
 }
 
 #[cfg(feature = "std")]
-impl io::Write for Context {
+impl core::io::Write for Context {
     #[inline]
-    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+    fn write(&mut self, data: &[u8]) -> core::io::Result<usize> {
         self.consume(data);
         Ok(data.len())
     }
 
     #[inline]
-    fn flush(&mut self) -> io::Result<()> {
+    fn flush(&mut self) -> core::io::Result<()> {
         Ok(())
     }
 }
