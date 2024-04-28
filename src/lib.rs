@@ -93,9 +93,10 @@ implement!(UpperHex, "{:02X}");
 /// A context.
 #[derive(Clone)]
 pub struct Context {
-    buffer: [u8; 64],
-    count: [u32; 2],
     state: [u32; 4],
+    buffer: [u8; 64],
+    cursor: usize,
+    length: u64,
 }
 
 const PADDING: [u8; 64] = {
@@ -132,9 +133,10 @@ impl Context {
     #[inline]
     pub fn new() -> Context {
         Context {
-            buffer: [0; 64],
-            count: [0, 0],
             state: STATE,
+            buffer: [0; 64],
+            cursor: 0,
+            length: 0,
         }
     }
 
@@ -142,9 +144,10 @@ impl Context {
     #[cfg(target_pointer_width = "32")]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         consume(
-            &mut self.buffer,
-            &mut self.count,
             &mut self.state,
+            &mut self.buffer,
+            &mut self.cursor,
+            &mut self.length,
             data.as_ref(),
         );
     }
@@ -153,20 +156,24 @@ impl Context {
     #[cfg(target_pointer_width = "64")]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         for chunk in data.as_ref().chunks(core::u32::MAX as usize) {
-            consume(&mut self.buffer, &mut self.count, &mut self.state, chunk);
+            consume(
+                &mut self.state,
+                &mut self.buffer,
+                &mut self.cursor,
+                &mut self.length,
+                chunk,
+            );
         }
     }
 
     /// Finalize and return the digest.
-    pub fn compute(self) -> Digest {
-        let Context {
-            mut buffer,
-            count,
-            mut state,
-        } = self;
-        let cursor = (count[0] % 64) as usize;
-        let length = (count[0] as u64 | ((count[1] as u64) << 32)) << 3;
-        Digest(finalize(&mut buffer, &mut state, cursor, length))
+    pub fn compute(mut self) -> Digest {
+        Digest(finalize(
+            &mut self.state,
+            &mut self.buffer,
+            self.cursor,
+            self.length,
+        ))
     }
 }
 
@@ -216,33 +223,33 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
         }
     }
 
-    Digest(finalize(
-        &mut buffer,
-        &mut state,
-        cursor,
-        (data.len() << 3) as u64,
-    ))
+    Digest(finalize(&mut state, &mut buffer, cursor, data.len() as u64))
 }
 
 #[inline(always)]
-fn consume(buffer: &mut [u8; 64], count: &mut [u32; 2], state: &mut [u32; 4], data: &[u8]) {
-    let mut cursor = count[0] % 64;
+fn consume(
+    state: &mut [u32; 4],
+    buffer: &mut [u8; 64],
+    cursor: &mut usize,
+    length: &mut u64,
+    data: &[u8],
+) {
     for chunk in data {
-        buffer[cursor as usize] = *chunk;
-        cursor += 1;
-        if cursor == 64 {
+        buffer[*cursor] = *chunk;
+        *cursor += 1;
+        if *cursor == 64 {
             transform(state, buffer);
-            cursor = 0;
+            *cursor = 0;
         }
     }
-    increment(count, data.len() as u64);
+    *length = length.wrapping_add(data.len() as u64);
 }
 
 #[allow(clippy::needless_range_loop)]
 #[inline(always)]
 fn finalize(
-    buffer: &mut [u8; 64],
     state: &mut [u32; 4],
+    buffer: &mut [u8; 64],
     cursor: usize,
     mut length: u64,
 ) -> [u8; 16] {
@@ -253,6 +260,7 @@ fn finalize(
     } else {
         buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
     }
+    length <<= 3;
     for i in 56..64 {
         buffer[i] = length as u8;
         length >>= 8;
@@ -265,14 +273,6 @@ fn finalize(
         state[i / 4] >>= 8;
     }
     output
-}
-
-#[inline(always)]
-fn increment(count: &mut [u32; 2], addition: u64) {
-    let length = count[0] as u64 | ((count[1] as u64) << 32);
-    let length = length.wrapping_add(addition);
-    count[0] = length as u32;
-    count[1] = (length >> 32) as u32;
 }
 
 #[allow(clippy::identity_op, clippy::needless_range_loop)]
