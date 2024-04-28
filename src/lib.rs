@@ -207,8 +207,8 @@ fn consume(
     length: &mut u64,
     data: &[u8],
 ) {
-    for chunk in data {
-        buffer[*cursor] = *chunk;
+    for value in data {
+        buffer[*cursor] = *value;
         *cursor += 1;
         if *cursor == 64 {
             transform(state, buffer);
