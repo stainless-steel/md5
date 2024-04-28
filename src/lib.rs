@@ -188,20 +188,12 @@ impl core::io::Write for Context {
 /// Compute the digest of data.
 #[allow(clippy::needless_range_loop)]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
-    let mut buffer: [u8; 64] = [0; 64];
     let mut state = STATE;
+    let mut buffer: [u8; 64] = [0; 64];
     let mut cursor = 0;
-
+    let mut length = 0;
     let data = data.as_ref();
-    for &value in data {
-        buffer[cursor] = value;
-        cursor += 1;
-        if cursor == 64 {
-            transform(&mut state, &buffer);
-            cursor = 0;
-        }
-    }
-
+    consume(&mut state, &mut buffer, &mut cursor, &mut length, data);
     Digest(finalize(&mut state, &mut buffer, cursor, data.len() as u64))
 }
 
