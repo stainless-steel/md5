@@ -140,7 +140,6 @@ impl Context {
     }
 
     /// Finalize and return the digest.
-    #[inline]
     pub fn finalize(mut self) -> Digest {
         Digest(finalize(
             &mut self.state,
