@@ -25,8 +25,7 @@
 //! [VU836068]: https://www.kb.cert.org/vuls/id/836068
 
 // The implementation is based on:
-// https://people.csail.mit.edu/rivest/Md5.c
-// https://tools.ietf.org/html/rfc1321
+// https://www.ietf.org/rfc/rfc1321.txt
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
