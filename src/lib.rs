@@ -94,7 +94,7 @@ implement!(UpperHex, "{:02X}");
 #[derive(Clone)]
 pub struct Context {
     buffer: [u8; 64],
-    count: [u32; 2],
+    count: u64,
     state: [u32; 4],
 }
 
@@ -111,34 +111,25 @@ impl Context {
     pub fn new() -> Context {
         Context {
             buffer: [0; 64],
-            count: [0, 0],
+            count: 0,
             state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
         }
     }
 
     /// Consume data.
-    #[cfg(target_pointer_width = "32")]
     #[inline]
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
         consume(self, data.as_ref());
     }
 
-    /// Consume data.
-    #[cfg(target_pointer_width = "64")]
-    pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        for chunk in data.as_ref().chunks(core::u32::MAX as usize) {
-            consume(self, chunk);
-        }
-    }
-
     /// Finalize and return the digest.
     #[rustfmt::skip]
     #[allow(clippy::double_parens, clippy::needless_range_loop)]
-    pub fn compute(mut self) -> Digest {
+    pub fn finalize(mut self) -> Digest {
         let mut input = [0u32; 16];
-        let k = ((self.count[0] >> 3) & 0x3f) as usize;
-        input[14] = self.count[0];
-        input[15] = self.count[1];
+        let k = ((self.count >> 3) & 0x3f) as usize;
+        input[14] = self.count as u32;
+        input[15] = (self.count >> 32) as u32;
         consume(
             &mut self,
             &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
@@ -163,6 +154,13 @@ impl Context {
         }
         Digest(digest)
     }
+
+    /// Finalize and return the digest.
+    #[deprecated(since = "0.8.0", note = "Use `finalize`.")]
+    #[inline]
+    pub fn compute(self) -> Digest {
+        self.finalize()
+    }
 }
 
 impl Default for Context {
@@ -175,7 +173,7 @@ impl Default for Context {
 impl convert::From<Context> for Digest {
     #[inline]
     fn from(context: Context) -> Digest {
-        context.compute()
+        context.finalize()
     }
 }
 
@@ -198,7 +196,7 @@ impl io::Write for Context {
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut context = Context::new();
     context.consume(data);
-    context.compute()
+    context.finalize()
 }
 
 #[rustfmt::skip]
@@ -212,13 +210,8 @@ fn consume(
     data: &[u8],
 ) {
     let mut input = [0u32; 16];
-    let mut k = ((count[0] >> 3) & 0x3f) as usize;
-    let length = data.len() as u32;
-    count[0] = count[0].wrapping_add(length << 3);
-    if count[0] < length << 3 {
-        count[1] = count[1].wrapping_add(1);
-    }
-    count[1] = count[1].wrapping_add(length >> 29);
+    let mut k = ((*count >> 3) & 0x3f) as usize;
+    *count = count.wrapping_add((data.len() as u64) << 3);
     for &value in data {
         buffer[k] = value;
         k += 1;
@@ -382,6 +375,10 @@ fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
 
 #[cfg(test)]
 mod tests {
+    use std::io::prelude::Write;
+
+    use super::Context;
+
     #[test]
     fn compute() {
         let inputs = [
@@ -405,7 +402,13 @@ mod tests {
             "57edf4a22be3c955ac49da2e2107b67a",
         ];
         for (input, &output) in inputs.iter().zip(outputs.iter()) {
-            assert_eq!(format!("{:x}", super::compute(input)), output);
+            let digest = super::compute(input);
+            assert_eq!(format!("{digest:x}"), output);
+
+            let mut context = Context::new();
+            context.consume(input);
+            let digest = context.finalize();
+            assert_eq!(format!("{digest:x}"), output);
         }
     }
 
@@ -418,30 +421,26 @@ mod tests {
     }
 
     #[test]
-    fn overflow_count() {
-        use std::io::prelude::Write;
+    fn write_29() {
         let data = vec![0; 8 * 1024 * 1024];
-        let mut context = super::Context::new();
+        let mut context = Context::new();
         for _ in 0..64 {
             context.write(&data).unwrap();
         }
         assert_eq!(
-            format!("{:x}", context.compute()),
-            "aa559b4e3523a6c931f08f4df52d58f2"
+            format!("{:x}", context.finalize()),
+            "aa559b4e3523a6c931f08f4df52d58f2",
         );
     }
 
     #[test]
-    #[cfg(target_pointer_width = "64")]
-    fn overflow_length() {
-        use std::io::prelude::Write;
-        use std::u32::MAX;
-        let data = vec![0; MAX as usize + 1];
-        let mut context = super::Context::new();
+    fn write_32() {
+        let data = vec![0; std::u32::MAX as usize + 1];
+        let mut context = Context::new();
         context.write(&data).unwrap();
         assert_eq!(
-            format!("{:x}", context.compute()),
-            "c9a5a6878d97b48cc965c1e41859f034"
+            format!("{:x}", context.finalize()),
+            "c9a5a6878d97b48cc965c1e41859f034",
         );
     }
 }

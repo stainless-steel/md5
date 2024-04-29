@@ -37,6 +37,6 @@ fn context(size: usize, bencher: &mut test::Bencher) {
     bencher.iter(|| {
         let mut context = Context::new();
         context.consume(&data);
-        test::black_box(context.compute());
+        test::black_box(context.finalize());
     });
 }
