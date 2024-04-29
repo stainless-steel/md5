@@ -181,7 +181,6 @@ impl core::io::Write for Context {
 }
 
 /// Compute the digest of data.
-#[allow(clippy::needless_range_loop)]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let (state, buffer, cursor, length) = consume(STATE, [0; 64], 0, 0, data.as_ref());
     finalize(state, buffer, cursor, length)
