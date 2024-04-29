@@ -224,20 +224,9 @@ fn finalize(mut state: [u32; 4], mut buffer: [u8; 64], cursor: usize, mut length
     Digest(value)
 }
 
-#[allow(clippy::needless_range_loop)]
 #[inline(always)]
 fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
-    let buffer = {
-        let mut value: [u32; 16] = [0; 16];
-        for i in 0..16 {
-            let j = i * 4;
-            value[i] = (buffer[j] as u32)
-                + ((buffer[j + 1] as u32) << 8)
-                + ((buffer[j + 2] as u32) << 16)
-                + ((buffer[j + 3] as u32) << 24);
-        }
-        value
-    };
+    let buffer = convert(buffer);
 
     let mut a = state[0];
     let mut b = state[1];
@@ -272,6 +261,20 @@ fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     state[1] = state[1].wrapping_add(b);
     state[2] = state[2].wrapping_add(c);
     state[3] = state[3].wrapping_add(d);
+}
+
+#[allow(clippy::needless_range_loop)]
+#[inline(always)]
+fn convert(buffer: &[u8; 64]) -> [u32; 16] {
+    let mut value: [u32; 16] = [0; 16];
+    for i in 0..16 {
+        let j = i * 4;
+        value[i] = (buffer[j] as u32)
+            + ((buffer[j + 1] as u32) << 8)
+            + ((buffer[j + 2] as u32) << 16)
+            + ((buffer[j + 3] as u32) << 24);
+    }
+    value
 }
 
 #[inline(always)]
