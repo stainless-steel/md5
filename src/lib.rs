@@ -261,19 +261,19 @@ fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
 }
 
 #[inline(always)]
-fn construct(buffer: &[u8; 64]) -> [u32; 16] {
+fn construct(data: &[u8; 64]) -> [u32; 16] {
     let mut value: [u32; 16] = [0; 16];
-    for i in 0..16 {
-        value[i] = u32::from_le_bytes(buffer[4 * i..4 * (i + 1)].try_into().unwrap());
+    for (i, chunk) in data.chunks(4).enumerate() {
+        value[i] = u32::from_le_bytes(chunk.try_into().unwrap());
     }
     value
 }
 
 #[inline(always)]
-fn destruct(state: [u32; 4]) -> [u8; 16] {
+fn destruct(data: [u32; 4]) -> [u8; 16] {
     let mut value: [u8; 16] = [0; 16];
-    for i in 0..4 {
-        value[4 * i..4 * (i + 1)].copy_from_slice(&state[i].to_le_bytes());
+    for (i, chunk) in value.chunks_mut(4).enumerate() {
+        chunk.copy_from_slice(&data[i].to_le_bytes());
     }
     value
 }
