@@ -130,13 +130,9 @@ impl Context {
 
     /// Consume data.
     pub fn consume<T: AsRef<[u8]>>(&mut self, data: T) {
-        consume(
-            &mut self.state,
-            &mut self.buffer,
-            &mut self.cursor,
-            &mut self.length,
-            data.as_ref(),
-        );
+        let data = data.as_ref();
+        self.cursor = consume(&mut self.state, &mut self.buffer, self.cursor, data);
+        self.length = self.length.wrapping_add(data.len() as u64);
     }
 
     /// Finalize and return the digest.
@@ -183,39 +179,24 @@ impl core::io::Write for Context {
 /// Compute the digest of data.
 #[allow(clippy::needless_range_loop)]
 pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
-    let Context {
-        mut state,
-        mut buffer,
-        mut cursor,
-        mut length,
-    } = Context::new();
-    consume(
-        &mut state,
-        &mut buffer,
-        &mut cursor,
-        &mut length,
-        data.as_ref(),
-    );
-    finalize(&mut state, &mut buffer, cursor, length)
+    let data = data.as_ref();
+    let mut state = STATE;
+    let mut buffer = [0; 64];
+    let cursor = consume(&mut state, &mut buffer, 0, data);
+    finalize(&mut state, &mut buffer, cursor, data.len() as u64)
 }
 
 #[inline(always)]
-fn consume(
-    state: &mut [u32; 4],
-    buffer: &mut [u8; 64],
-    cursor: &mut usize,
-    length: &mut u64,
-    data: &[u8],
-) {
+fn consume(state: &mut [u32; 4], buffer: &mut [u8; 64], mut cursor: usize, data: &[u8]) -> usize {
     for value in data {
-        buffer[*cursor] = *value;
-        *cursor += 1;
-        if *cursor == 64 {
+        buffer[cursor] = *value;
+        cursor += 1;
+        if cursor == 64 {
             transform(state, buffer);
-            *cursor = 0;
+            cursor = 0;
         }
     }
-    *length = length.wrapping_add(data.len() as u64);
+    cursor
 }
 
 #[allow(clippy::needless_range_loop)]
