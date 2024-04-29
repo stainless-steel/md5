@@ -208,7 +208,7 @@ fn consume(
 
 #[allow(clippy::needless_range_loop)]
 #[inline(always)]
-fn finalize(mut state: [u32; 4], mut buffer: [u8; 64], cursor: usize, mut length: u64) -> Digest {
+fn finalize(mut state: [u32; 4], mut buffer: [u8; 64], cursor: usize, length: u64) -> Digest {
     if cursor > 55 {
         buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
         transform(&mut state, &buffer);
@@ -216,24 +216,14 @@ fn finalize(mut state: [u32; 4], mut buffer: [u8; 64], cursor: usize, mut length
     } else {
         buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
     }
-    length <<= 3;
-    for i in 56..64 {
-        buffer[i] = length as u8;
-        length >>= 8;
-    }
+    buffer[56..].copy_from_slice(&(length << 3).to_le_bytes());
     transform(&mut state, &buffer);
-
-    let mut value: [u8; 16] = [0; 16];
-    for i in 0..16 {
-        value[i] = state[i / 4] as u8;
-        state[i / 4] >>= 8;
-    }
-    Digest(value)
+    Digest(destruct(state))
 }
 
 #[inline(always)]
 fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
-    let buffer = convert(buffer);
+    let buffer = construct(buffer);
 
     let mut a = state[0];
     let mut b = state[1];
@@ -270,16 +260,20 @@ fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     state[3] = state[3].wrapping_add(d);
 }
 
-#[allow(clippy::needless_range_loop)]
 #[inline(always)]
-fn convert(buffer: &[u8; 64]) -> [u32; 16] {
+fn construct(buffer: &[u8; 64]) -> [u32; 16] {
     let mut value: [u32; 16] = [0; 16];
     for i in 0..16 {
-        let j = i * 4;
-        value[i] = (buffer[j] as u32)
-            + ((buffer[j + 1] as u32) << 8)
-            + ((buffer[j + 2] as u32) << 16)
-            + ((buffer[j + 3] as u32) << 24);
+        value[i] = u32::from_le_bytes(buffer[4 * i..4 * (i + 1)].try_into().unwrap());
+    }
+    value
+}
+
+#[inline(always)]
+fn destruct(state: [u32; 4]) -> [u8; 16] {
+    let mut value: [u8; 16] = [0; 16];
+    for i in 0..4 {
+        value[4 * i..4 * (i + 1)].copy_from_slice(&state[i].to_le_bytes());
     }
     value
 }
