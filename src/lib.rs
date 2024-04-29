@@ -224,17 +224,15 @@ fn finalize(mut state: [u32; 4], mut buffer: [u8; 64], cursor: usize, mut length
     Digest(value)
 }
 
-#[allow(clippy::double_parens, clippy::needless_range_loop)]
+#[allow(clippy::needless_range_loop)]
 #[inline(always)]
-#[rustfmt::skip]
 fn transform(state: &mut [u32; 4], buffer: &[u8; 64]) {
     let buffer = {
         let mut value: [u32; 16] = [0; 16];
         for i in 0..16 {
             let j = i * 4;
-            value[i] =
-                  ((buffer[j    ] as u32)      )
-                + ((buffer[j + 1] as u32) <<  8)
+            value[i] = (buffer[j] as u32)
+                + ((buffer[j + 1] as u32) << 8)
                 + ((buffer[j + 2] as u32) << 16)
                 + ((buffer[j + 3] as u32) << 24);
         }
