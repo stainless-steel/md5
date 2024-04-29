@@ -136,8 +136,8 @@ impl Context {
     }
 
     /// Finalize and return the digest.
-    pub fn finalize(mut self) -> Digest {
-        finalize(&mut self.state, &mut self.buffer, self.cursor, self.length)
+    pub fn finalize(self) -> Digest {
+        finalize(self.state, self.buffer, self.cursor, self.length)
     }
 
     /// Finalize and return the digest.
@@ -183,7 +183,7 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
     let mut state = STATE;
     let mut buffer = [0; 64];
     let cursor = consume(&mut state, &mut buffer, 0, data);
-    finalize(&mut state, &mut buffer, cursor, data.len() as u64)
+    finalize(state, buffer, cursor, data.len() as u64)
 }
 
 #[inline(always)]
@@ -201,10 +201,10 @@ fn consume(state: &mut [u32; 4], buffer: &mut [u8; 64], mut cursor: usize, data:
 
 #[allow(clippy::needless_range_loop)]
 #[inline(always)]
-fn finalize(state: &mut [u32; 4], buffer: &mut [u8; 64], cursor: usize, mut length: u64) -> Digest {
+fn finalize(mut state: [u32; 4], mut buffer: [u8; 64], cursor: usize, mut length: u64) -> Digest {
     if cursor > 55 {
         buffer[cursor..64].copy_from_slice(&PADDING[..64 - cursor]);
-        transform(state, buffer);
+        transform(&mut state, &buffer);
         buffer[0..56].copy_from_slice(&PADDING[1..57])
     } else {
         buffer[cursor..56].copy_from_slice(&PADDING[..56 - cursor])
@@ -214,7 +214,7 @@ fn finalize(state: &mut [u32; 4], buffer: &mut [u8; 64], cursor: usize, mut leng
         buffer[i] = length as u8;
         length >>= 8;
     }
-    transform(state, buffer);
+    transform(&mut state, &buffer);
 
     let mut value: [u8; 16] = [0; 16];
     for i in 0..16 {
