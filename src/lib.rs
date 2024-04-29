@@ -33,32 +33,25 @@
 #[cfg(feature = "std")]
 use std as core;
 
-use core::convert;
-use core::fmt;
-use core::ops;
-
-#[cfg(feature = "std")]
-use core::io;
-
 /// A digest.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Digest(pub [u8; 16]);
 
-impl convert::From<Digest> for [u8; 16] {
+impl core::convert::From<Digest> for [u8; 16] {
     #[inline]
     fn from(digest: Digest) -> Self {
         digest.0
     }
 }
 
-impl fmt::Debug for Digest {
+impl core::fmt::Debug for Digest {
     #[inline]
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        fmt::LowerHex::fmt(self, formatter)
+    fn fmt(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+        core::fmt::LowerHex::fmt(self, formatter)
     }
 }
 
-impl ops::Deref for Digest {
+impl core::ops::Deref for Digest {
     type Target = [u8; 16];
 
     #[inline]
@@ -67,7 +60,7 @@ impl ops::Deref for Digest {
     }
 }
 
-impl ops::DerefMut for Digest {
+impl core::ops::DerefMut for Digest {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
@@ -76,8 +69,8 @@ impl ops::DerefMut for Digest {
 
 macro_rules! implement {
     ($kind:ident, $format:expr) => {
-        impl fmt::$kind for Digest {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        impl core::fmt::$kind for Digest {
+            fn fmt(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
                 for value in &self.0 {
                     write!(formatter, $format, value)?;
                 }
@@ -170,7 +163,7 @@ impl Default for Context {
     }
 }
 
-impl convert::From<Context> for Digest {
+impl core::convert::From<Context> for Digest {
     #[inline]
     fn from(context: Context) -> Digest {
         context.finalize()
@@ -178,15 +171,15 @@ impl convert::From<Context> for Digest {
 }
 
 #[cfg(feature = "std")]
-impl io::Write for Context {
+impl core::io::Write for Context {
     #[inline]
-    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
+    fn write(&mut self, data: &[u8]) -> core::io::Result<usize> {
         self.consume(data);
         Ok(data.len())
     }
 
     #[inline]
-    fn flush(&mut self) -> io::Result<()> {
+    fn flush(&mut self) -> core::io::Result<()> {
         Ok(())
     }
 }
