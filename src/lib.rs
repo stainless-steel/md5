@@ -229,7 +229,7 @@ fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
         ($a:expr, $b:expr) => ($a.wrapping_add($b));
     );
     macro_rules! rotate(
-        ($x:expr, $n:expr) => (($x << $n) | ($x >> (32 - $n)));
+        ($x:expr, $n:expr) => ($x.rotate_left($n));
     );
     {
         macro_rules! F(
