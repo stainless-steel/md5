@@ -225,7 +225,7 @@ fn transform(state: &mut [u32; 4], block: &[u8; 64]) {
     );
     {
         macro_rules! F(
-            ($x:expr, $y:expr, $z:expr) => (($x & $y) | (!$x & $z));
+            ($x:expr, $y:expr, $z:expr) => ($z ^ ($x & ($y ^ $z)));
         );
         macro_rules! T(
             ($a:expr, $b:expr, $c:expr, $d:expr, $x:expr, $s:expr, $ac:expr) => ({
@@ -257,7 +257,7 @@ fn transform(state: &mut [u32; 4], block: &[u8; 64]) {
     }
     {
         macro_rules! F(
-            ($x:expr, $y:expr, $z:expr) => (($x & $z) | ($y & !$z));
+            ($x:expr, $y:expr, $z:expr) => ($y ^ ($z & ($x ^ $y)));
         );
         macro_rules! T(
             ($a:expr, $b:expr, $c:expr, $d:expr, $x:expr, $s:expr, $ac:expr) => ({
