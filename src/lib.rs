@@ -404,6 +404,23 @@ mod tests {
         assert_eq!(&mut digest[0], &mut 0x90);
     }
 
+    /// Chunked input must produce the same digest as one-shot input across block boundaries.
+    #[test]
+    fn consume_chunk_boundaries() {
+        for len in [0, 1, 55, 56, 57, 63, 64, 65, 119, 120, 121, 1024] {
+            let data: Vec<_> = (0..len).map(|i| (i % 251) as u8).collect();
+            let expected = super::compute(&data);
+
+            for chunk_size in [1, 7, 63, 64, 65, 128] {
+                let mut context = Context::new();
+                for chunk in data.chunks(chunk_size) {
+                    context.consume(chunk);
+                }
+                assert_eq!(context.finalize(), expected);
+            }
+        }
+    }
+
     #[test]
     fn write_29() {
         let data = vec![0; 8 * 1024 * 1024];
