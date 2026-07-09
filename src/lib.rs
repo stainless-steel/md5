@@ -118,23 +118,14 @@ impl Context {
     #[rustfmt::skip]
     #[allow(clippy::double_parens, clippy::needless_range_loop)]
     pub fn finalize(mut self) -> Digest {
-        let mut input = [0u32; 16];
         let k = ((self.count >> 3) & 0x3f) as usize;
-        input[14] = self.count as u32;
-        input[15] = (self.count >> 32) as u32;
+        let length = self.count.to_le_bytes();
         consume(
             &mut self,
             &PADDING[..(if k < 56 { 56 - k } else { 120 - k })],
         );
-        let mut j = 0;
-        for i in 0..14 {
-            input[i] = ((self.buffer[j + 3] as u32) << 24) |
-                       ((self.buffer[j + 2] as u32) << 16) |
-                       ((self.buffer[j + 1] as u32) <<  8) |
-                       ((self.buffer[j    ] as u32)      );
-            j += 4;
-        }
-        transform(&mut self.state, &input);
+        self.buffer[56..64].copy_from_slice(&length);
+        transform(&mut self.state, &self.buffer);
         let mut digest = [0u8; 16];
         let mut j = 0;
         for i in 0..4 {
@@ -192,38 +183,39 @@ pub fn compute<T: AsRef<[u8]>>(data: T) -> Digest {
 }
 
 #[rustfmt::skip]
-#[allow(clippy::double_parens, clippy::needless_range_loop)]
-fn consume(
-    Context {
-        buffer,
-        count,
-        state,
-    }: &mut Context,
-    data: &[u8],
-) {
-    let mut input = [0u32; 16];
-    let mut k = ((*count >> 3) & 0x3f) as usize;
-    *count = count.wrapping_add((data.len() as u64) << 3);
-    for &value in data {
-        buffer[k] = value;
-        k += 1;
-        if k == 0x40 {
-            let mut j = 0;
-            for i in 0..16 {
-                input[i] = ((buffer[j + 3] as u32) << 24) |
-                           ((buffer[j + 2] as u32) << 16) |
-                           ((buffer[j + 1] as u32) <<  8) |
-                           ((buffer[j    ] as u32)      );
-                j += 4;
-            }
-            transform(state, &input);
-            k = 0;
+#[inline(always)]
+fn consume(context: &mut Context, mut data: &[u8]) {
+    let k = ((context.count >> 3) & 0x3f) as usize;
+    context.count = context.count.wrapping_add((data.len() as u64) << 3);
+    if k != 0 {
+        let n = core::cmp::min(64 - k, data.len());
+        context.buffer[k..k + n].copy_from_slice(&data[..n]);
+        data = &data[n..];
+        if k + n != 64 {
+            return;
         }
+        transform(&mut context.state, &context.buffer);
     }
+    while data.len() >= 64 {
+        let block = <&[u8; 64]>::try_from(&data[..64]).expect("slice is exactly one MD5 block");
+        transform(&mut context.state, block);
+        data = &data[64..];
+    }
+    context.buffer[..data.len()].copy_from_slice(data);
 }
 
 #[rustfmt::skip]
-fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
+#[inline(always)]
+fn transform(state: &mut [u32; 4], block: &[u8; 64]) {
+    macro_rules! decode(
+        ($i:expr) => (u32::from_le_bytes([block[$i], block[$i + 1], block[$i + 2], block[$i + 3]]));
+    );
+    let input = [
+        decode!( 0), decode!( 4), decode!( 8), decode!(12),
+        decode!(16), decode!(20), decode!(24), decode!(28),
+        decode!(32), decode!(36), decode!(40), decode!(44),
+        decode!(48), decode!(52), decode!(56), decode!(60),
+    ];
     let (mut a, mut b, mut c, mut d) = (state[0], state[1], state[2], state[3]);
     macro_rules! add(
         ($a:expr, $b:expr) => ($a.wrapping_add($b));
@@ -233,7 +225,7 @@ fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
     );
     {
         macro_rules! F(
-            ($x:expr, $y:expr, $z:expr) => (($x & $y) | (!$x & $z));
+            ($x:expr, $y:expr, $z:expr) => ($z ^ ($x & ($y ^ $z)));
         );
         macro_rules! T(
             ($a:expr, $b:expr, $c:expr, $d:expr, $x:expr, $s:expr, $ac:expr) => ({
@@ -265,7 +257,7 @@ fn transform(state: &mut [u32; 4], input: &[u32; 16]) {
     }
     {
         macro_rules! F(
-            ($x:expr, $y:expr, $z:expr) => (($x & $z) | ($y & !$z));
+            ($x:expr, $y:expr, $z:expr) => ($y ^ ($z & ($x ^ $y)));
         );
         macro_rules! T(
             ($a:expr, $b:expr, $c:expr, $d:expr, $x:expr, $s:expr, $ac:expr) => ({
@@ -410,6 +402,23 @@ mod tests {
         assert_eq!(digest[0], 0x90);
         assert_eq!(&digest[0], &0x90);
         assert_eq!(&mut digest[0], &mut 0x90);
+    }
+
+    /// Chunked input must produce the same digest as one-shot input across block boundaries.
+    #[test]
+    fn consume_chunk_boundaries() {
+        for len in [0, 1, 55, 56, 57, 63, 64, 65, 119, 120, 121, 1024] {
+            let data: Vec<_> = (0..len).map(|i| (i % 251) as u8).collect();
+            let expected = super::compute(&data);
+
+            for chunk_size in [1, 7, 63, 64, 65, 128] {
+                let mut context = Context::new();
+                for chunk in data.chunks(chunk_size) {
+                    context.consume(chunk);
+                }
+                assert_eq!(context.finalize(), expected);
+            }
+        }
     }
 
     #[test]
