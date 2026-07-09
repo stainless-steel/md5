@@ -432,6 +432,7 @@ mod tests {
         );
     }
 
+    #[cfg(target_pointer_width = "64")]
     #[test]
     fn write_32() {
         let data = vec![0; std::u32::MAX as usize + 1];
