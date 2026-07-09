@@ -197,7 +197,7 @@ fn consume(context: &mut Context, mut data: &[u8]) {
         transform(&mut context.state, &context.buffer);
     }
     while data.len() >= 64 {
-        let block = <&[u8; 64]>::try_from(&data[..64]).expect("slice is exactly one MD5 block");
+        let block = <&[u8; 64]>::try_from(&data[..64]).unwrap();
         transform(&mut context.state, block);
         data = &data[64..];
     }
